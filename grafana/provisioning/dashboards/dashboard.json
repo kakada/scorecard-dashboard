@@ -218,7 +218,7 @@
       "type": "yesoreyeram-boomtheme-panel"
     },
     {
-      "description": "ប័ណ្ណដាក់ពិន្ទុសរុប (អនុវត្តរួចរាល់/កំពុងត្រួតពិនិត្យ/គ្រោងទុក)",
+      "description": "ប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុកសរុប/កំពុងត្រួតពិនិត្យ/អនុវត្តរួចរាល់)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -268,11 +268,12 @@
       "pluginVersion": "10.1.4",
       "targets": [
         {
+          "editorMode": "code",
           "format": "table",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n),\ntotal_conducted AS (\n  SELECT count(*) as \"Total Conducted\"\n  from _scorecards as sc\n  where \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.completed_at is not null\n    AND sc.dataset_id2 in ($dataset_id)\n),\nformated_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  from scorecards s\n),\ntotal_planned AS (\n  SELECT\n    count(*) as \"Total Planned\"\n  FROM formated_scorecards AS s\n  WHERE\n    s.program_id in (${program_id})\n    AND $__timeFilter(s.created_at)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.dataset_id2 in ($dataset_id)\n),\ntotal_in_review AS (\n  SELECT count(*) as \"Total In Review\"\n  from _scorecards as sc\n  where \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.submitted_at is not null\n    AND sc.completed_at is null\n    AND sc.dataset_id2 in ($dataset_id)\n)\n\nSELECT \n  concat_ws (\n    ' / ',\n    (select * from total_conducted),\n    (select * from total_in_review),\n    (select * from total_planned)  \n  )",
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n),\ntotal_conducted AS (\n  SELECT count(*) as \"Total Conducted\"\n  from _scorecards as sc\n  where \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.completed_at is not null\n    AND sc.dataset_id2 in ($dataset_id)\n),\nformated_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  from scorecards s\n),\ntotal_planned AS (\n  SELECT\n    count(*) as \"Total Planned\"\n  FROM formated_scorecards AS s\n  WHERE\n    s.program_id in (${program_id})\n    AND $__timeFilter(s.created_at)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.dataset_id2 in ($dataset_id)\n),\ntotal_in_review AS (\n  SELECT count(*) as \"Total In Review\"\n  from _scorecards as sc\n  where \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.submitted_at is not null\n    AND sc.completed_at is null\n    AND sc.dataset_id2 in ($dataset_id)\n)\n\nSELECT \n  concat_ws (\n    ' / ',\n    (select * from total_planned),\n    (select * from total_in_review),\n    (select * from total_conducted)\n  )",
           "refId": "A",
           "select": [
             [
@@ -284,6 +285,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "table": "locations",
           "timeColumn": "created_at",
           "timeColumnType": "timestamp",
@@ -296,7 +314,7 @@
           ]
         }
       ],
-      "title": "ប័ណ្ណដាក់ពិន្ទុសរុប (អនុវត្តរួចរាល់/កំពុងត្រួតពិនិត្យ/គ្រោងទុក)",
+      "title": "ប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុកសរុប/កំពុងត្រួតពិនិត្យ/អនុវត្តរួចរាល់)",
       "type": "stat"
     },
     {
@@ -614,11 +632,12 @@
       "pluginVersion": "10.1.4",
       "targets": [
         {
+          "editorMode": "code",
           "format": "table",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH pa AS (\n  SELECT\n    p.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN p.disability = true THEN 'Disability' END),\n      (CASE WHEN p.minority = true THEN 'Minority' END),\n      (CASE WHEN p.youth = true THEN 'Youth' END),\n      (CASE WHEN p.poor_card = true THEN 'ID Poor' END),\n      (CASE WHEN (p.disability = false AND p.minority = false AND p.youth = false AND p.poor_card = false) THEN 'N/A' END)\n    ) as profile\n  FROM participants AS p\n),\nraised AS (\n  SELECT\n    pa.*,\n    raised_indicators.id,\n    raised_indicators.indicator_uuid,\n    raised_indicators.selected,\n    indicators.type\n  FROM pa\n  INNER JOIN raised_indicators ON pa.uuid = raised_indicators.participant_uuid\n  INNER JOIN indicators ON raised_indicators.indicator_uuid = indicators.uuid\n  WHERE\n    string_to_array(pa.profile, ', ') && array[$profile]\n    AND pa.gender in ($gender)\n    AND pa.age BETWEEN ${age:raw}\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n),\ncompleted_scorecards AS (\n  SELECT *\n  FROM _scorecards as sc\n  WHERE \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.dataset_id2 in ($dataset_id)\n\n),\n_total_raised AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n),\n_total_raised_selected AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE\n    raised.selected = true\n)\n\nSELECT \n  concat_ws (\n    ' / ',\n    (select * from _total_raised),\n    (select * from _total_raised_selected)\n  );",
+          "rawSql": "WITH raised AS (\n  SELECT\n    raised_indicators.id,\n    raised_indicators.indicator_uuid,\n    raised_indicators.selected,\n    raised_indicators.scorecard_uuid,\n    indicators.type\n  FROM raised_indicators\n  INNER JOIN indicators ON raised_indicators.indicator_uuid = indicators.uuid\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n),\ncompleted_scorecards AS (\n  SELECT *\n  FROM _scorecards as sc\n  WHERE \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.dataset_id2 in ($dataset_id)\n\n),\n_total_raised AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n),\n\n_total_raised_custom AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE raised.type = 'Indicators::CustomIndicator'\n),\n\n_total_raised_selected AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE\n    raised.selected = true\n)\n\nSELECT \n  concat_ws (\n    ' / ',\n    (select * from _total_raised),\n    (select * from _total_raised_custom),\n    (select * from _total_raised_selected)\n  );",
           "refId": "A",
           "select": [
             [
@@ -630,6 +649,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "table": "locations",
           "timeColumn": "created_at",
           "timeColumnType": "timestamp",
@@ -642,11 +678,11 @@
           ]
         }
       ],
-      "title": "ចំនួនសរុប Indicator (ស្នើឡើង / អាទិភាព)",
+      "title": "ចំនួនសរុប Indicator (ស្នើឡើង / ស្នើឡើងថ្មី / អាទិភាព)",
       "type": "stat"
     },
     {
-      "description": "Indicator ស្នើឡើង ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br>\nIndicator ស្នើឡើងថ្មី ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br>\nIndicator អាទិភាព ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់",
+      "description": "Indicator ស្នើឡើង ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់<br>\nIndicator ស្នើឡើងថ្មី ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br>\nIndicator អាទិភាព ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br/>\n- សម្គាល់៖ លទ្ធផលបង្គត់ឡើង(Ex: 0.3 -> 1)\n",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -696,11 +732,12 @@
       "pluginVersion": "10.1.4",
       "targets": [
         {
+          "editorMode": "code",
           "format": "table",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH pa AS (\n  SELECT\n    p.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN p.disability = true THEN 'Disability' END),\n      (CASE WHEN p.minority = true THEN 'Minority' END),\n      (CASE WHEN p.youth = true THEN 'Youth' END),\n      (CASE WHEN p.poor_card = true THEN 'ID Poor' END),\n      (CASE WHEN (p.disability = false AND p.minority = false AND p.youth = false AND p.poor_card = false) THEN 'N/A' END)\n    ) as profile\n  FROM participants AS p\n),\nraised AS (\n  SELECT\n    pa.*,\n    raised_indicators.id,\n    raised_indicators.indicator_uuid,\n    raised_indicators.selected,\n    indicators.type\n  FROM pa\n  INNER JOIN raised_indicators ON pa.uuid = raised_indicators.participant_uuid\n  INNER JOIN indicators ON raised_indicators.indicator_uuid = indicators.uuid\n  WHERE\n    string_to_array(pa.profile, ', ') && array[$profile]\n    AND pa.gender in ($gender)\n    AND pa.age BETWEEN ${age:raw}\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n),\ncompleted_scorecards AS (\n  SELECT *\n  FROM _scorecards as sc\n  WHERE \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.dataset_id2 in ($dataset_id)\n),\n_total_raised AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n),\n_total_raised_selected AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE\n    raised.selected = true\n),\n_total_raised_custom AS (\n  SELECT count(DISTINCT raised.indicator_uuid)\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE\n    raised.type = 'Indicators::CustomIndicator'\n),\n_total_scorecard AS (\n  SELECT count(*)\n  FROM completed_scorecards\n),\n\n_avg_raised AS (\n  SELECT (select * from _total_raised) / (select * from _total_scorecard)\n),\n_avg_raised_selected AS (\n  SELECT (select * from _total_raised_selected) / (select * from _total_scorecard)\n),\n_avg_raised_custom AS (\n  SELECT (select * from _total_raised_custom) / (select * from _total_scorecard)\n)\n\nSELECT \n  concat_ws (\n    ' / ',\n    (select * from _avg_raised),\n    (select * from _avg_raised_custom),\n    (select * from _avg_raised_selected)\n  );",
+          "rawSql": "WITH raised AS (\n  SELECT\n    raised_indicators.id,\n    raised_indicators.indicator_uuid,\n    raised_indicators.selected,\n    raised_indicators.scorecard_uuid,\n    indicators.type\n  FROM raised_indicators\n  INNER JOIN indicators\n    ON raised_indicators.indicator_uuid = indicators.uuid\n),\n\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws(\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE \n        WHEN s.number_of_disability = 0\n         AND s.number_of_ethnic_minority = 0\n         AND s.number_of_youth = 0\n         AND s.number_of_id_poor = 0\n        THEN 'N/A'\n      END)\n    ) AS profile,\n\n    concat_ws(\n      '',\n      (CASE WHEN s.dataset_id IS NULL THEN '' END),\n      (CASE WHEN s.dataset_id IS NOT NULL THEN s.dataset_id END)\n    ) AS dataset_id2\n\n  FROM scorecards AS s\n  INNER JOIN participants AS p\n    ON s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at IS NULL\n    AND s.completed_at IS NOT NULL\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n),\n\ncompleted_scorecards AS (\n  SELECT *\n  FROM _scorecards sc\n  WHERE \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.dataset_id2 in ($dataset_id)\n),\n\n_total_raised AS (\n  SELECT COUNT(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards\n    ON raised.scorecard_uuid::INTEGER = completed_scorecards.id\n),\n\n_total_raised_selected AS (\n  SELECT COUNT(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards\n    ON raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE raised.selected = true\n),\n\n_total_raised_custom AS (\n  SELECT COUNT(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards\n    ON raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE raised.type = 'Indicators::CustomIndicator'\n),\n\n_total_scorecard AS (\n  SELECT COUNT(*)\n  FROM completed_scorecards\n)\n\nSELECT concat_ws(\n  ' / ',\n\n  -- total raised\n  COALESCE(\n    CEIL(\n      (SELECT * FROM _total_raised)::numeric /\n      NULLIF((SELECT * FROM _total_scorecard), 0)\n    ),\n    0\n  ),\n\n  -- custom raised\n  COALESCE(\n    CEIL(\n      (SELECT * FROM _total_raised_custom)::numeric /\n      NULLIF((SELECT * FROM _total_scorecard), 0)\n    ),\n    0\n  ),\n\n  -- selected raised\n  COALESCE(\n    CEIL(\n      (SELECT * FROM _total_raised_selected)::numeric /\n      NULLIF((SELECT * FROM _total_scorecard), 0)\n    ),\n    0\n  )\n);",
           "refId": "A",
           "select": [
             [
@@ -712,6 +749,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "table": "locations",
           "timeColumn": "created_at",
           "timeColumnType": "timestamp",
@@ -2036,11 +2090,12 @@
       "pluginVersion": "8.1.2",
       "targets": [
         {
+          "editorMode": "code",
           "format": "table",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH pa AS (\n  SELECT\n    p.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN p.disability = true THEN 'Disability' END),\n      (CASE WHEN p.minority = true THEN 'Minority' END),\n      (CASE WHEN p.youth = true THEN 'Youth' END),\n      (CASE WHEN p.poor_card = true THEN 'ID Poor' END),\n      (CASE WHEN (p.disability = false AND p.minority = false AND p.youth = false AND p.poor_card = false) THEN 'N/A' END)\n    ) as profile\n  FROM participants AS p\n),\nraised AS (\n  SELECT\n    pa.*,\n    raised_indicators.id,\n    raised_indicators.indicator_uuid\n  FROM pa\n  INNER JOIN raised_indicators ON pa.uuid = raised_indicators.participant_uuid\n  WHERE\n    string_to_array(pa.profile, ', ') && array[$profile]\n    AND pa.gender in ($gender)\n    AND pa.age BETWEEN ${age:raw}\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards s\n)\n\nSELECT\n  indicators.name,\n  count(*) as \"ចំនួនស្នើឡើង\"\nFROM raised\nINNER JOIN _scorecards s ON\n  raised.scorecard_uuid::INTEGER = s.id\nINNER JOIN indicators ON\n  raised.indicator_uuid = indicators.uuid\nWHERE \n  s.program_id in (${program_id})\n  AND $__timeFilter(s.conducted_date)\n  AND s.scorecard_type in ($scorecard_type)\n  AND s.year in ($year)\n  AND s.facility_id in ($facility_id)\n  AND s.province_id in ($province_id)\n  AND s.local_ngo_id in ($local_ngo_id)\n  AND s.deleted_at is null\n  AND s.completed_at is not null\n  AND s.dataset_id2 in ($dataset_id)\nGROUP BY indicators.name\nORDER BY \"ចំនួនស្នើឡើង\" DESC\nLIMIT 5;",
+          "rawSql": "WITH raised AS (\n  SELECT\n    raised_indicators.id,\n    raised_indicators.indicator_uuid,\n    raised_indicators.scorecard_uuid\n  FROM raised_indicators\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards s\n)\n\nSELECT\n  indicators.name,\n  count(*) as \"ចំនួនស្នើឡើង\"\nFROM raised\nINNER JOIN _scorecards s ON\n  raised.scorecard_uuid::INTEGER = s.id\nINNER JOIN indicators ON\n  raised.indicator_uuid = indicators.uuid\nWHERE \n  s.program_id in (${program_id})\n  AND $__timeFilter(s.conducted_date)\n  AND s.scorecard_type in ($scorecard_type)\n  AND s.year in ($year)\n  AND s.facility_id in ($facility_id)\n  AND s.province_id in ($province_id)\n  AND s.local_ngo_id in ($local_ngo_id)\n  AND s.deleted_at is null\n  AND s.completed_at is not null\n  AND s.dataset_id2 in ($dataset_id)\nGROUP BY indicators.name\nORDER BY \"ចំនួនស្នើឡើង\" DESC\nLIMIT 5;",
           "refId": "A",
           "select": [
             [
@@ -2052,6 +2107,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "table": "locations",
           "timeColumn": "created_at",
           "timeColumnType": "timestamp",
@@ -2162,11 +2234,12 @@
       "pluginVersion": "8.1.2",
       "targets": [
         {
+          "editorMode": "code",
           "format": "table",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH pa AS (\n  SELECT\n    p.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN p.disability = true THEN 'Disability' END),\n      (CASE WHEN p.minority = true THEN 'Minority' END),\n      (CASE WHEN p.youth = true THEN 'Youth' END),\n      (CASE WHEN p.poor_card = true THEN 'ID Poor' END),\n      (CASE WHEN (p.disability = false AND p.minority = false AND p.youth = false AND p.poor_card = false) THEN 'N/A' END)\n    ) as profile\n  FROM participants AS p\n),\nraised AS (\n  SELECT\n    pa.*,\n    raised_indicators.id,\n    raised_indicators.indicator_uuid\n  FROM pa\n  INNER JOIN raised_indicators ON pa.uuid = raised_indicators.participant_uuid\n  WHERE\n    string_to_array(pa.profile, ', ') && array[$profile]\n    AND pa.gender in ($gender)\n    AND pa.age BETWEEN ${age:raw}\n    AND raised_indicators.selected is true\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards s\n)\n\nSELECT\n  indicators.name,\n  count(distinct(raised.scorecard_uuid)) as \"ចំនួនបានអនុវត្ត\"\nFROM raised\nINNER JOIN _scorecards s ON\n  raised.scorecard_uuid::INTEGER = s.id\nINNER JOIN indicators ON\n  raised.indicator_uuid = indicators.uuid\nWHERE \n  s.program_id in ($program_id)\n  AND $__timeFilter(s.conducted_date)\n  AND s.scorecard_type in ($scorecard_type)\n  AND s.year in ($year)\n  AND s.facility_id in ($facility_id)\n  AND s.province_id in ($province_id)\n  AND s.local_ngo_id in ($local_ngo_id)\n  AND s.deleted_at is null\n  AND s.completed_at is not null\n  AND s.dataset_id2 in ($dataset_id)\nGROUP BY indicators.name\nORDER BY \"ចំនួនបានអនុវត្ត\" DESC\nLIMIT 5;",
+          "rawSql": "WITH raised AS (\n  SELECT\n    raised_indicators.id,\n    raised_indicators.indicator_uuid,\n    raised_indicators.scorecard_uuid\n  FROM raised_indicators\n  WHERE\n    raised_indicators.selected is true\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards s\n)\n\nSELECT\n  indicators.name,\n  count(distinct(raised.scorecard_uuid)) as \"ចំនួនបានអនុវត្ត\"\nFROM raised\nINNER JOIN _scorecards s ON\n  raised.scorecard_uuid::INTEGER = s.id\nINNER JOIN indicators ON\n  raised.indicator_uuid = indicators.uuid\nWHERE \n  s.program_id in ($program_id)\n  AND $__timeFilter(s.conducted_date)\n  AND s.scorecard_type in ($scorecard_type)\n  AND s.year in ($year)\n  AND s.facility_id in ($facility_id)\n  AND s.province_id in ($province_id)\n  AND s.local_ngo_id in ($local_ngo_id)\n  AND s.deleted_at is null\n  AND s.completed_at is not null\n  AND s.dataset_id2 in ($dataset_id)\nGROUP BY indicators.name\nORDER BY \"ចំនួនបានអនុវត្ត\" DESC\nLIMIT 5;",
           "refId": "A",
           "select": [
             [
@@ -2178,6 +2251,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "table": "locations",
           "timeColumn": "created_at",
           "timeColumnType": "timestamp",
@@ -2621,7 +2711,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<div style=\"display: flex;\">\n<div style=\"display: flex;margin: 0 auto;\">\n<div style=\"text-align: center; margin-right: 20px\">\n<h5 style=\"font-size: 14px;\">គាំទ្រមូលនិធិដោយ/Funded by</h5>\n<img src=\"https://scorecard-stg.dojoconnect.co/assets/eu-3902d24e7e972494ede15c7dc533bc20589ef6e80aca3335518cea5944984c09.png\"  width=\"70\"/>\n</div>\n\n<div style=\"text-align: center; margin-top: 0\">\n<h5 style=\"font-size: 14px;\">អនុវត្តដោយ/Implemented by</h5>\n<div style=\"margin-top: 24px\">\n<img src=\"https://scorecard-stg.dojoconnect.co/assets/care_logo-30bc7807ccb532ee750d35b55a3e94c40e688a88a18d0497c4e244bc56f4017d.png\" width=\"130\" height=\"40\" />\n<img src=\"https://scorecard-stg.dojoconnect.co/assets/api-a84a9246854e6e9c471aa6982fb90ed27377b050f69318966fe0c3923d371886.png\"  width=\"55\" style=\"margin: 0 20px;\"/>\n<img src=\"https://scorecard-stg.dojoconnect.co/assets/instedd-ilabsea-252db350ccbce84ff56c4057db2f6a5761873c8d7b4c9c5ee9c31049ba7d3792.png\"  width=\"180\" style=\"margin-top: 5px;\"/>\n</div>\n</div>\n\n</div>\n</div>\n  \n<div style=\"text-align: center;\">\n  <a href=\"https://scorecard-stg.dojoconnect.co/\" target=\"_blank\" >អំពីយើង/About Us</a>\n</div>\n  ",
+        "content": "<div style=\"display: flex;\">\n  <div style=\"display: flex;margin: 0 auto;\">\n    <div style=\"text-align: center; margin-right: 24px\">\n      <h5 style=\"font-size: 14px;\">គាំទ្រមូលនិធិដោយ/Funded by</h5>\n      <img src=\"https://digitalscorecard.org/assets/stakeholder_v2/eu-4214c5869a64c511e3308e315b75cf72bbe5aa8eafb292caeabf08269b829ea6.png\"  height=\"60\"/>\n      <img src=\"https://digitalscorecard.org/assets/stakeholder_v2/ipa-337739219cc18f911825f4a31eb5f6acf685986a268920d06b0b731885887e87.png\"  height=\"52\"/>\n    </div>\n\n    <div style=\"text-align: center; margin-top: 0\">\n      <h5 style=\"font-size: 14px;\">អនុវត្តដោយ/Implemented by</h5>\n      <div style=\"margin-top: 24px\">\n        <img src=\"https://digitalscorecard.org/assets/stakeholder_v2/care-833e9065d49ba3c7c0b47f0a3291821873edbfc3c65c4047c3db6cd28e63b9b0.png\" height=\"36\" style=\"margin-right: 15px\"/>\n        <img src=\"https://digitalscorecard.org/assets/stakeholder_v2/ycc-073d5f1f4b2f67648e7ea81fd92999ca4a214ce36d77395168f7b1237c9ed940.png\"  height=\"40\" style=\"margin-right: 15px\"/>\n        <img src=\"https://digitalscorecard.org/assets/stakeholder_v2/idea-eb888e696eb1697652332068774e3191fd757a91a4721a839cbf394982c39e4a.jpg\"  height=\"36\"/>\n      </div>\n    </div>\n  </div>\n</div>\n  \n<div style=\"text-align: center; margin-top: 24px\">\n  <a href=\"https://digitalscorecard.org/about\" target=\"_blank\" rel=\"noopener noreferrer\">អំពីយើង/About Us</a>\n</div>",
         "mode": "html"
       },
       "pluginVersion": "10.1.4",
@@ -2792,7 +2882,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "hide": 0,
+        "hide": 2,
         "includeAll": true,
         "label": "Age",
         "multi": false,
@@ -2839,7 +2929,7 @@
             "$__all"
           ]
         },
-        "hide": 0,
+        "hide": 2,
         "includeAll": true,
         "label": "Gender",
         "multi": true,
@@ -2874,7 +2964,7 @@
       {
         "allValue": "'Disability', 'Minority', 'ID Poor', 'Youth', 'N/A'",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -2882,7 +2972,7 @@
             "$__all"
           ]
         },
-        "hide": 0,
+        "hide": 2,
         "includeAll": true,
         "label": "Profile",
         "multi": true,
