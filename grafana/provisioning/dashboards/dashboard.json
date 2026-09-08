@@ -1161,7 +1161,67 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "green",
+                  "fixedColor": "#31c0c7",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ប័ណ្ណដាក់ពិន្ទុ(វាយតម"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#92aa75",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "វាយតម្លៃដោយខ្លួនឯង"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#31c0c7",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Scorecard (Self assessment + Community scorecard)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#92aa75",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ប័ណ្ណដាក់ពិន្ទុរួម(វា"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#92aa75",
                   "mode": "fixed"
                 }
               }
@@ -1211,7 +1271,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n)\n\nSELECT \n  facilities.name_${locale} as name, \n  COUNT(CASE WHEN t.scorecard_type = 1 THEN 1 END) as \"$scorecard_type_self_assessment\",\n  COUNT(CASE WHEN t.scorecard_type = 2 THEN 2 END) as \"$scorecard_type_community_scorecard\"\nFROM (\n  SELECT * \n  FROM _scorecards as sc\n  WHERE \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.dataset_id2 in ($dataset_id)\n) as t\nINNER JOIN facilities ON t.facility_id = facilities.id\nGROUP BY facilities.name_${locale};",
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n)\n\nSELECT \n  facilities.name_${locale} as name, \n  COUNT(CASE WHEN t.scorecard_type = 1 THEN 1 END) as \"$scorecard_type_self_assessment\",\n  COUNT(CASE WHEN t.scorecard_type = 2 THEN 2 END) as \"$scorecard_type_community_scorecard\",\n  COUNT(CASE WHEN t.scorecard_type = 3 THEN 3 END) as \"$scorecard_type_combined_scorecard\"\nFROM (\n  SELECT * \n  FROM _scorecards as sc\n  WHERE \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.dataset_id2 in ($dataset_id)\n) as t\nINNER JOIN facilities ON t.facility_id = facilities.id\nGROUP BY facilities.name_${locale};",
           "refId": "A",
           "select": [
             [
@@ -2454,8 +2514,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2474,7 +2533,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "yellow",
+                  "fixedColor": "green",
                   "mode": "fixed"
                 }
               }
@@ -2494,45 +2553,6 @@
                 }
               }
             ]
-          },
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "Proposed Count"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Proposed Count"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
           }
         ]
       },
@@ -2542,7 +2562,7 @@
         "x": 0,
         "y": 38
       },
-      "id": 43,
+      "id": 33,
       "options": {
         "barRadius": 0,
         "barWidth": 0.62,
@@ -2660,8 +2680,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2694,7 +2713,7 @@
         "x": 12,
         "y": 38
       },
-      "id": 33,
+      "id": 44,
       "options": {
         "barRadius": 0,
         "barWidth": 0.62,
@@ -2812,8 +2831,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2979,8 +2997,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3146,8 +3163,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3364,7 +3380,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3392,7 +3408,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3420,7 +3436,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3610,7 +3626,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3638,7 +3654,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3666,7 +3682,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3694,7 +3710,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3722,7 +3738,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3893,8 +3909,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ចំនួនប័ណ្ណដាក់ពិន្ទុដែលបានបញ្ចូលទិន្នន័យក្រោយថ្ងៃអនុវត្តជាក់ស្តែង <br>Fomular: (Entry date - Conducted date >= 1 Day) <br>ឧទាហរណ៍៖ ថ្ងៃអនុវត្តប័ណ្ណដាក់ពិន្ទុជាក់ស្តែង 01-មករា-2022 តែ ថ្ងៃបញ្ចូលទិន្នន័យ 03-មករា-2022។",
-          "value": "ចំនួនប័ណ្ណដាក់ពិន្ទុដែលបានបញ្ចូលទិន្នន័យក្រោយថ្ងៃអនុវត្តជាក់ស្តែង <br>Fomular: (Entry date - Conducted date >= 1 Day) <br>ឧទាហរណ៍៖ ថ្ងៃអនុវត្តប័ណ្ណដាក់ពិន្ទុជាក់ស្តែង 01-មករា-2022 តែ ថ្ងៃបញ្ចូលទិន្នន័យ 03-មករា-2022។"
+          "text": "ចំនួនប័ណ្ណដាក់ពិន្ទុដែលបានបញ្ចូលទិន្នន័យក្រោយថ្ងៃអនុវត្តជាក់ស្តែង <br>Formula: (Entry date - Conducted date >= 1 Day) <br>ឧទាហរណ៍៖ ថ្ងៃអនុវត្តប័ណ្ណដាក់ពិន្ទុជាក់ស្តែង 01-មករា-2022 តែ ថ្ងៃបញ្ចូលទិន្នន័យ 03-មករា-2022។",
+          "value": "ចំនួនប័ណ្ណដាក់ពិន្ទុដែលបានបញ្ចូលទិន្នន័យក្រោយថ្ងៃអនុវត្តជាក់ស្តែង <br>Formula: (Entry date - Conducted date >= 1 Day) <br>ឧទាហរណ៍៖ ថ្ងៃអនុវត្តប័ណ្ណដាក់ពិន្ទុជាក់ស្តែង 01-មករា-2022 តែ ថ្ងៃបញ្ចូលទិន្នន័យ 03-មករា-2022។"
         },
         "datasource": {
           "type": "postgres",
@@ -4146,8 +4162,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍) តាមប្រភេទសេវា",
-          "value": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍) តាមប្រភេទសេវា"
+          "text": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍ vs ប័ណ្ណដាក់ពិន្ទុរួម(វាយតម្លៃខ្លួនឯង + សហគមន៍)) តាមប្រភេទសេវា",
+          "value": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍ vs ប័ណ្ណដាក់ពិន្ទុរួម(វាយតម្លៃខ្លួនឯង + សហគមន៍)) តាមប្រភេទសេវា"
         },
         "datasource": {
           "type": "postgres",
@@ -4169,8 +4185,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍) តាមប្រភេទសេវា",
-          "value": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍) តាមប្រភេទសេវា"
+          "text": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍ vs ប័ណ្ណដាក់ពិន្ទុរួម(វាយតម្លៃខ្លួនឯង + សហគមន៍)) តាមប្រភេទសេវា",
+          "value": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍ vs ប័ណ្ណដាក់ពិន្ទុរួម(វាយតម្លៃខ្លួនឯង + សហគមន៍)) តាមប្រភេទសេវា"
         },
         "datasource": {
           "type": "postgres",
@@ -4859,6 +4875,29 @@
       {
         "current": {
           "selected": false,
+          "text": "ប័ណ្ណដាក់ពិន្ទុរួម(វាយតម្លៃខ្លួនឯង + សហគមន៍)",
+          "value": "ប័ណ្ណដាក់ពិន្ទុរួម(វាយតម្លៃខ្លួនឯង + សហគមន៍)"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'scorecard_type_combined_scorecard'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "scorecard_type_combined_scorecard",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'scorecard_type_combined_scorecard'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
           "text": "ថេប្លេត",
           "value": "ថេប្លេត"
         },
@@ -4996,9 +5035,10 @@
       },
       {
         "current": {
+          "isNone": true,
           "selected": false,
-          "text": "ប័ណ្ណក្រីក្រ",
-          "value": "ប័ណ្ណក្រីក្រ"
+          "text": "None",
+          "value": ""
         },
         "datasource": {
           "type": "postgres",
