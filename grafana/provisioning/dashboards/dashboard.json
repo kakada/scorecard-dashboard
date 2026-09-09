@@ -430,6 +430,224 @@
         "type": "postgres",
         "uid": "PCC52D03280B7034C"
       },
+      "description": "$scorecard_completion_rate_panel_description",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 9,
+        "y": 4
+      },
+      "id": 45,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "text": {
+          "valueSize": 60
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PCC52D03280B7034C"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws(\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) AS profile,\n    concat_ws(\n      '',\n      (CASE WHEN s.dataset_id IS NULL THEN '' END),\n      (CASE WHEN s.dataset_id IS NOT NULL THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards AS s\n  WHERE \n    s.program_id IN (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type IN ($scorecard_type)\n    AND s.year IN ($year)\n    AND s.facility_id IN ($facility_id)\n    AND s.province_id IN ($province_id)\n    AND s.local_ngo_id IN ($local_ngo_id)\n    AND s.deleted_at IS NULL\n),\n\ntotal_conducted AS (\n  SELECT count(*) AS total_conducted\n  FROM _scorecards AS sc\n  WHERE \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.completed_at IS NOT NULL\n    AND sc.dataset_id2 IN ($dataset_id)\n),\n\ntotal_planned AS (\n  SELECT count(*) AS total_planned\n  FROM scorecards AS s\n  WHERE\n    s.program_id IN (${program_id})\n    AND $__timeFilter(s.created_at)\n    AND s.scorecard_type IN ($scorecard_type)\n    AND s.year IN ($year)\n    AND s.facility_id IN ($facility_id)\n    AND s.province_id IN ($province_id)\n    AND s.local_ngo_id IN ($local_ngo_id)\n    AND s.deleted_at IS NULL\n    AND concat_ws(\n      '',\n      (CASE WHEN s.dataset_id IS NULL THEN '' END),\n      (CASE WHEN s.dataset_id IS NOT NULL THEN s.dataset_id END)\n    ) IN ($dataset_id)\n)\n\nSELECT\n  concat(\n    ROUND(\n      (SELECT total_conducted FROM total_conducted)::numeric\n      / NULLIF((SELECT total_planned FROM total_planned), 0) * 100,\n      2\n    ),\n    '%'\n  ) AS \"Completion Rate\"",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "latitude"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "table": "locations",
+          "timeColumn": "created_at",
+          "timeColumnType": "timestamp",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "$scorecard_completion_rate_panel_title",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
+      "description": "$scorecard_geo_coverage_rate_panel_description",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 9,
+        "x": 15,
+        "y": 4
+      },
+      "id": 46,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PCC52D03280B7034C"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH covered_locations AS (\n  SELECT DISTINCT\n    d.province_id,\n    d.district_id,\n    d.commune_id\n  FROM scorecards AS s\n  INNER JOIN datasets AS d ON s.dataset_id = d.id\n  WHERE\n    s.program_id IN (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type IN ($scorecard_type)\n    AND s.year IN ($year)\n    AND d.province_id IN ($province_id)\n    AND s.local_ngo_id IN ($local_ngo_id)\n    AND s.deleted_at IS NULL\n    AND s.completed_at IS NOT NULL\n),\n\ntarget_locations AS (\n  SELECT DISTINCT\n    d.province_id,\n    d.district_id,\n    d.commune_id\n  FROM scorecards AS s\n  INNER JOIN datasets AS d ON s.dataset_id = d.id\n  WHERE\n    s.program_id IN (${program_id})\n    AND $__timeFilter(s.created_at)\n    AND s.scorecard_type IN ($scorecard_type)\n    AND s.year IN ($year)\n    AND d.province_id IN ($province_id)\n    AND s.local_ngo_id IN ($local_ngo_id)\n    AND s.deleted_at IS NULL\n),\n\nsummary AS (\n  SELECT\n    (SELECT count(DISTINCT province_id) FROM covered_locations) AS provinces_covered,\n    (SELECT count(DISTINCT province_id) FROM target_locations) AS provinces_target,\n    (SELECT count(DISTINCT district_id) FROM covered_locations) AS districts_covered,\n    (SELECT count(DISTINCT district_id) FROM target_locations) AS districts_target,\n    (SELECT count(DISTINCT commune_id) FROM covered_locations) AS communes_covered,\n    (SELECT count(DISTINCT commune_id) FROM target_locations) AS communes_target\n)\n\nSELECT '$province_covered' AS \"$location\",\n  concat(provinces_covered, '/', provinces_target) AS \"$covered_vs_target\",\n  concat(ROUND((provinces_covered::numeric / NULLIF(provinces_target, 0)) * 100, 2), '%') AS \"$coverage_rate\"\nFROM summary\n\nUNION ALL\n\nSELECT '$district_covered' AS \"$location\",\n  concat(districts_covered, '/', districts_target) AS \"$covered_vs_target\",\n  concat(ROUND((districts_covered::numeric / NULLIF(districts_target, 0)) * 100, 2), '%') AS \"$coverage_rate\"\nFROM summary\n\nUNION ALL\n\nSELECT '$commune_covered' AS \"$location\",\n  concat(communes_covered, '/', communes_target) AS \"$covered_vs_target\",\n  concat(ROUND((communes_covered::numeric / NULLIF(communes_target, 0)) * 100, 2), '%') AS \"$coverage_rate\"\nFROM summary",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "latitude"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "table": "locations",
+          "timeColumn": "created_at",
+          "timeColumnType": "timestamp",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "$scorecard_geo_coverage_rate_panel_title",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
       "description": "$scorecard_implementation_duration_panel_description",
       "fieldConfig": {
         "defaults": {
@@ -457,7 +675,7 @@
         "h": 4,
         "w": 15,
         "x": 9,
-        "y": 4
+        "y": 10
       },
       "id": 34,
       "options": {
@@ -558,10 +776,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
-        "w": 15,
-        "x": 9,
-        "y": 8
+        "h": 5,
+        "w": 11,
+        "x": 0,
+        "y": 14
       },
       "id": 39,
       "options": {
@@ -634,6 +852,120 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
+      "description": "$scorecard_beneficiary_reach_description",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 13,
+        "x": 11,
+        "y": 14
+      },
+      "id": 47,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PCC52D03280B7034C"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws(\n      '',\n      (CASE WHEN s.dataset_id IS NULL THEN '' END),\n      (CASE WHEN s.dataset_id IS NOT NULL THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards AS s\n  WHERE \n    s.program_id IN (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type IN ($scorecard_type)\n    AND s.year IN ($year)\n    AND s.facility_id IN ($facility_id)\n    AND s.province_id IN ($province_id)\n    AND s.local_ngo_id IN ($local_ngo_id)\n    AND s.deleted_at IS NULL\n    AND s.completed_at IS NOT NULL\n),\n\n_conducted_scorecards AS (\n  SELECT s.*\n  FROM _scorecards s\n  WHERE s.dataset_id2 IN ($dataset_id)\n),\n\n_participants AS (\n  SELECT p.*\n  FROM participants AS p\n  WHERE \n    p.scorecard_uuid::integer IN (SELECT id FROM _conducted_scorecards)\n    AND p.countable = true\n),\n\n_total_participant AS (\n  SELECT count(*) AS total_participant FROM _participants\n),\n\n_total_female AS (\n  SELECT count(*) AS total_female\n  FROM _participants\n  WHERE gender = 'female'\n),\n\n_total_youth AS (\n  SELECT count(*) AS total_youth\n  FROM _participants\n  WHERE youth = true\n),\n\n_total_disability AS (\n  SELECT count(*) AS total_disability\n  FROM _participants\n  WHERE disability = true\n),\n\n_total_minority AS (\n  SELECT count(*) AS total_minority\n  FROM _participants\n  WHERE minority = true\n)\n\nSELECT\n  (SELECT total_participant FROM _total_participant) AS \"$total_participants\",\n  concat(\n    (SELECT total_female FROM _total_female),\n    ' (',\n    ROUND(\n      (SELECT total_female FROM _total_female)::numeric\n      / NULLIF((SELECT total_participant FROM _total_participant), 0) * 100, 0\n    ), '%)'\n  ) AS \"$female_percentage\",\n  concat(\n    (SELECT total_youth FROM _total_youth),\n    ' (',\n    ROUND(\n      (SELECT total_youth FROM _total_youth)::numeric\n      / NULLIF((SELECT total_participant FROM _total_participant), 0) * 100, 0\n    ), '%)'\n  ) AS \"$youth_percentage\",\n  concat(\n    (SELECT total_disability FROM _total_disability),\n    ' (',\n    ROUND(\n      (SELECT total_disability FROM _total_disability)::numeric\n      / NULLIF((SELECT total_participant FROM _total_participant), 0) * 100, 0\n    ), '%)'\n  ) AS \"$disabilities_percentage\",\n  concat(\n    (SELECT total_minority FROM _total_minority),\n    ' (',\n    ROUND(\n      (SELECT total_minority FROM _total_minority)::numeric\n      / NULLIF((SELECT total_participant FROM _total_participant), 0) * 100, 0\n    ), '%)'\n  ) AS \"$minority_percentage\"",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "latitude"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "table": "locations",
+          "timeColumn": "created_at",
+          "timeColumnType": "timestamp",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "$scorecard_beneficiary_reach_title",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
       "description": "$scorecard_total_indicators_panel_description",
       "fieldConfig": {
         "defaults": {
@@ -658,10 +990,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
-        "w": 8,
-        "x": 9,
-        "y": 11
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 19
       },
       "id": 40,
       "options": {
@@ -684,12 +1016,16 @@
       "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PCC52D03280B7034C"
+          },
           "editorMode": "code",
           "format": "table",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH raised AS (\n  SELECT\n    raised_indicators.id,\n    raised_indicators.indicator_uuid,\n    raised_indicators.selected,\n    raised_indicators.scorecard_uuid,\n    indicators.type\n  FROM raised_indicators\n  INNER JOIN indicators ON raised_indicators.indicator_uuid = indicators.uuid\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n),\ncompleted_scorecards AS (\n  SELECT *\n  FROM _scorecards as sc\n  WHERE \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.dataset_id2 in ($dataset_id)\n\n),\n_total_raised AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n),\n\n_total_raised_custom AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE raised.type = 'Indicators::CustomIndicator'\n),\n\n_total_raised_selected AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE\n    raised.selected = true\n)\n\nSELECT \n  concat_ws (\n    ' / ',\n    (select * from _total_raised),\n    (select * from _total_raised_custom),\n    (select * from _total_raised_selected)\n  );",
+          "rawSql": "WITH raised AS (\n  SELECT\n    raised_indicators.id,\n    raised_indicators.indicator_uuid,\n    raised_indicators.selected,\n    raised_indicators.scorecard_uuid,\n    indicators.type\n  FROM raised_indicators\n  INNER JOIN indicators ON raised_indicators.indicator_uuid = indicators.uuid\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n  GROUP BY s.id\n),\ncompleted_scorecards AS (\n  SELECT *\n  FROM _scorecards as sc\n  WHERE \n    sc.dataset_id2 in ($dataset_id)\n),\n_total_raised AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n),\n\n_total_raised_custom AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE raised.type = 'Indicators::CustomIndicator'\n),\n\n_total_raised_selected AS (\n  SELECT count(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards ON \n    raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE\n    raised.selected = true\n)\n\nSELECT \n  concat_ws (\n    ' / ',\n    (select * from _total_raised),\n    (select * from _total_raised_custom),\n    (select * from _total_raised_selected)\n  );",
           "refId": "A",
           "select": [
             [
@@ -734,6 +1070,10 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
       "description": "$scorecard_average_indicators_panel_description",
       "fieldConfig": {
         "defaults": {
@@ -758,10 +1098,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
-        "w": 7,
-        "x": 17,
-        "y": 11
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 19
       },
       "id": 41,
       "options": {
@@ -784,12 +1124,16 @@
       "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PCC52D03280B7034C"
+          },
           "editorMode": "code",
           "format": "table",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH raised AS (\n  SELECT\n    raised_indicators.id,\n    raised_indicators.indicator_uuid,\n    raised_indicators.selected,\n    raised_indicators.scorecard_uuid,\n    indicators.type\n  FROM raised_indicators\n  INNER JOIN indicators\n    ON raised_indicators.indicator_uuid = indicators.uuid\n),\n\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws(\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE \n        WHEN s.number_of_disability = 0\n         AND s.number_of_ethnic_minority = 0\n         AND s.number_of_youth = 0\n         AND s.number_of_id_poor = 0\n        THEN 'N/A'\n      END)\n    ) AS profile,\n\n    concat_ws(\n      '',\n      (CASE WHEN s.dataset_id IS NULL THEN '' END),\n      (CASE WHEN s.dataset_id IS NOT NULL THEN s.dataset_id END)\n    ) AS dataset_id2\n\n  FROM scorecards AS s\n  INNER JOIN participants AS p\n    ON s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at IS NULL\n    AND s.completed_at IS NOT NULL\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n),\n\ncompleted_scorecards AS (\n  SELECT *\n  FROM _scorecards sc\n  WHERE \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.dataset_id2 in ($dataset_id)\n),\n\n_total_raised AS (\n  SELECT COUNT(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards\n    ON raised.scorecard_uuid::INTEGER = completed_scorecards.id\n),\n\n_total_raised_selected AS (\n  SELECT COUNT(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards\n    ON raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE raised.selected = true\n),\n\n_total_raised_custom AS (\n  SELECT COUNT(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards\n    ON raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE raised.type = 'Indicators::CustomIndicator'\n),\n\n_total_scorecard AS (\n  SELECT COUNT(*)\n  FROM completed_scorecards\n)\n\nSELECT concat_ws(\n  ' / ',\n\n  -- total raised\n  COALESCE(\n    CEIL(\n      (SELECT * FROM _total_raised)::numeric /\n      NULLIF((SELECT * FROM _total_scorecard), 0)\n    ),\n    0\n  ),\n\n  -- custom raised\n  COALESCE(\n    CEIL(\n      (SELECT * FROM _total_raised_custom)::numeric /\n      NULLIF((SELECT * FROM _total_scorecard), 0)\n    ),\n    0\n  ),\n\n  -- selected raised\n  COALESCE(\n    CEIL(\n      (SELECT * FROM _total_raised_selected)::numeric /\n      NULLIF((SELECT * FROM _total_scorecard), 0)\n    ),\n    0\n  )\n);",
+          "rawSql": "WITH raised AS (\n  SELECT\n    raised_indicators.id,\n    raised_indicators.indicator_uuid,\n    raised_indicators.selected,\n    raised_indicators.scorecard_uuid,\n    indicators.type\n  FROM raised_indicators\n  INNER JOIN indicators\n    ON raised_indicators.indicator_uuid = indicators.uuid\n),\n\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws(\n      '',\n      (CASE WHEN s.dataset_id IS NULL THEN '' END),\n      (CASE WHEN s.dataset_id IS NOT NULL THEN s.dataset_id END)\n    ) AS dataset_id2\n\n  FROM scorecards AS s\n  INNER JOIN participants AS p\n    ON s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at IS NULL\n    AND s.completed_at IS NOT NULL\n  GROUP BY s.id\n),\n\ncompleted_scorecards AS (\n  SELECT *\n  FROM _scorecards sc\n  WHERE \n    sc.dataset_id2 in ($dataset_id)\n),\n\n_total_raised AS (\n  SELECT COUNT(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards\n    ON raised.scorecard_uuid::INTEGER = completed_scorecards.id\n),\n\n_total_raised_selected AS (\n  SELECT COUNT(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards\n    ON raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE raised.selected = true\n),\n\n_total_raised_custom AS (\n  SELECT COUNT(DISTINCT (raised.indicator_uuid, raised.scorecard_uuid))\n  FROM raised\n  INNER JOIN completed_scorecards\n    ON raised.scorecard_uuid::INTEGER = completed_scorecards.id\n  WHERE raised.type = 'Indicators::CustomIndicator'\n),\n\n_total_scorecard AS (\n  SELECT COUNT(*)\n  FROM completed_scorecards\n)\n\nSELECT concat_ws(\n  ' / ',\n\n  -- total raised\n  COALESCE(\n    CEIL(\n      (SELECT * FROM _total_raised)::numeric /\n      NULLIF((SELECT * FROM _total_scorecard), 0)\n    ),\n    0\n  ),\n\n  -- custom raised\n  COALESCE(\n    CEIL(\n      (SELECT * FROM _total_raised_custom)::numeric /\n      NULLIF((SELECT * FROM _total_scorecard), 0)\n    ),\n    0\n  ),\n\n  -- selected raised\n  COALESCE(\n    CEIL(\n      (SELECT * FROM _total_raised_selected)::numeric /\n      NULLIF((SELECT * FROM _total_scorecard), 0)\n    ),\n    0\n  )\n);",
           "refId": "A",
           "select": [
             [
@@ -970,6 +1314,36 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ចំនួនអនុម័ត"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Approved Count"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
           }
         ]
       },
@@ -977,7 +1351,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 14
+        "y": 23
       },
       "id": 32,
       "options": {
@@ -1015,7 +1389,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH conducted_scorecards AS (\n  SELECT *\n  FROM\n    (\n      SELECT\n        s.*,\n        concat_ws (\n          ', ',\n          (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n          (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n          (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n          (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n          (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n        ) as profile,\n        concat_ws (\n          '',\n          (CASE WHEN s.dataset_id is null THEN '' END),\n          (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n        ) AS dataset_id2\n      FROM scorecards as s\n      INNER JOIN participants on s.id::varchar(20) = participants.scorecard_uuid\n      WHERE \n        s.program_id in (${program_id})\n        AND $__timeFilter(s.conducted_date)\n        AND s.scorecard_type in ($scorecard_type)\n        AND s.year in ($year)\n        AND s.province_id in ($province_id)\n        AND s.local_ngo_id in ($local_ngo_id)\n        AND s.deleted_at is null\n        AND s.completed_at is not null\n        AND participants.age BETWEEN ${age:raw}\n        AND participants.gender in ($gender)\n      group by s.id\n    ) as sc\n  WHERE \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.dataset_id2 in ($dataset_id)\n),\n_formated_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2    \n  FROM scorecards s\n),\nplanned_scorecards AS (\n  SELECT\n    *\n  FROM _formated_scorecards AS s\n  WHERE\n    s.program_id in (${program_id})\n    AND $__timeFilter(s.created_at)\n    AND s.facility_id in ($facility_id) \n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.dataset_id2 in ($dataset_id)\n)\n\nSELECT\n  tm.name,\n  sum(tm.total_planned) as \"$scorecard_planned_count\",\n  sum(tm.total_conducted) as \"$scorecard_implemented_count\"\nFROM (\n  SELECT\n    facilities.name_${locale} as name,\n    ( SELECT count(*) FROM planned_scorecards AS cs WHERE cs.facility_id = facilities.id ) as \"total_planned\",\n    ( SELECT count(*) FROM conducted_scorecards AS cs WHERE cs.facility_id = facilities.id ) as \"total_conducted\"\n  FROM planned_scorecards\n  INNER JOIN facilities ON planned_scorecards.facility_id = facilities.id\n  GROUP BY facilities.name_${locale}, facilities.id\n) AS tm\nGROUP BY tm.name;",
+          "rawSql": "WITH conducted_scorecards AS (\n  SELECT *\n  FROM\n    (\n      SELECT\n        s.*,\n        concat_ws (\n          '',\n          (CASE WHEN s.dataset_id is null THEN '' END),\n          (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n        ) AS dataset_id2\n      FROM scorecards as s\n      INNER JOIN participants on s.id::varchar(20) = participants.scorecard_uuid\n      WHERE \n        s.program_id in (${program_id})\n        AND $__timeFilter(s.conducted_date)\n        AND s.scorecard_type in ($scorecard_type)\n        AND s.year in ($year)\n        AND s.province_id in ($province_id)\n        AND s.local_ngo_id in ($local_ngo_id)\n        AND s.deleted_at is null\n        AND s.completed_at is not null\n        AND participants.age BETWEEN ${age:raw}\n        AND participants.gender in ($gender)\n      group by s.id\n    ) as sc\n  WHERE \n    sc.dataset_id2 in ($dataset_id)\n),\n_formated_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2    \n  FROM scorecards s\n),\nplanned_scorecards AS (\n  SELECT\n    *\n  FROM _formated_scorecards AS s\n  WHERE\n    s.program_id in (${program_id})\n    AND $__timeFilter(s.created_at)\n    AND s.facility_id in ($facility_id) \n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.dataset_id2 in ($dataset_id)\n)\n\nSELECT\n  tm.name,\n  sum(tm.total_planned) as \"$scorecard_planned_count\",\n  sum(tm.total_conducted) as \"$scorecard_implemented_count\"\nFROM (\n  SELECT\n    facilities.name_${locale} as name,\n    ( SELECT count(*) FROM planned_scorecards AS cs WHERE cs.facility_id = facilities.id ) as \"total_planned\",\n    ( SELECT count(*) FROM conducted_scorecards AS cs WHERE cs.facility_id = facilities.id ) as \"total_conducted\"\n  FROM planned_scorecards\n  INNER JOIN facilities ON planned_scorecards.facility_id = facilities.id\n  GROUP BY facilities.name_${locale}, facilities.id\n) AS tm\nGROUP BY tm.name;",
           "refId": "A",
           "select": [
             [
@@ -1161,7 +1535,67 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "green",
+                  "fixedColor": "#31c0c7",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ប័ណ្ណដាក់ពិន្ទុ(វាយតម"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#92aa75",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "វាយតម្លៃដោយខ្លួនឯង"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#31c0c7",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Scorecard (Self assessment + Community scorecard)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#92aa75",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ប័ណ្ណដាក់ពិន្ទុរួម(វា"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#92aa75",
                   "mode": "fixed"
                 }
               }
@@ -1173,7 +1607,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 14
+        "y": 23
       },
       "id": 9,
       "options": {
@@ -1211,7 +1645,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n)\n\nSELECT \n  facilities.name_${locale} as name, \n  COUNT(CASE WHEN t.scorecard_type = 1 THEN 1 END) as \"$scorecard_type_self_assessment\",\n  COUNT(CASE WHEN t.scorecard_type = 2 THEN 2 END) as \"$scorecard_type_community_scorecard\"\nFROM (\n  SELECT * \n  FROM _scorecards as sc\n  WHERE \n    string_to_array(sc.profile, ', ') && array[$profile]\n    AND sc.dataset_id2 in ($dataset_id)\n) as t\nINNER JOIN facilities ON t.facility_id = facilities.id\nGROUP BY facilities.name_${locale};",
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n)\n\nSELECT \n  facilities.name_${locale} as name, \n  COUNT(CASE WHEN t.scorecard_type = 1 THEN 1 END) as \"$scorecard_type_self_assessment\",\n  COUNT(CASE WHEN t.scorecard_type = 2 THEN 2 END) as \"$scorecard_type_community_scorecard\",\n  COUNT(CASE WHEN t.scorecard_type = 3 THEN 3 END) as \"$scorecard_type_combined_scorecard\"\nFROM (\n  SELECT * \n  FROM _scorecards as sc\n  WHERE \n    sc.dataset_id2 in ($dataset_id)\n) as t\nINNER JOIN facilities ON t.facility_id = facilities.id\nGROUP BY facilities.name_${locale};",
           "refId": "A",
           "select": [
             [
@@ -1320,6 +1754,36 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ប័ណ្ណដាក់ពិន្ទុរួម(វាយតម្លៃខ្លួនឯង + សហគមន៍)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#92aa75",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Scorecard (Self assessment + Community scorecard)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#92aa75",
+                  "mode": "fixed"
+                }
+              }
+            ]
           }
         ]
       },
@@ -1327,7 +1791,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 22
+        "y": 31
       },
       "id": 42,
       "options": {
@@ -1365,7 +1829,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.scorecard_type = 1 THEN '$scorecard_type_self_assessment' END),\n      (CASE WHEN s.scorecard_type = 2 THEN '$scorecard_type_community_scorecard' END)\n    ) as scorecard_type_km,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n)\n\nSELECT\n  t.scorecard_type_km,\n  COUNT(*)\nFROM (\n  SELECT * \n  FROM _scorecards s\n  WHERE \n    string_to_array(s.profile, ', ') && array[$profile]\n    AND s.dataset_id2 in ($dataset_id)\n) as t\nGROUP BY t.scorecard_type_km;\n",
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.scorecard_type = 1 THEN '$scorecard_type_self_assessment' END),\n      (CASE WHEN s.scorecard_type = 2 THEN '$scorecard_type_community_scorecard' END),\n      (CASE WHEN s.scorecard_type = 3 THEN '$scorecard_type_combined_scorecard' END)\n    ) as scorecard_type_km,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n)\n\nSELECT\n  t.scorecard_type_km,\n  COUNT(*)\nFROM (\n  SELECT * \n  FROM _scorecards s\n  WHERE \n    string_to_array(s.profile, ', ') && array[$profile]\n    AND s.dataset_id2 in ($dataset_id)\n) as t\nGROUP BY t.scorecard_type_km;\n",
           "refId": "A",
           "select": [
             [
@@ -1556,7 +2020,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 22
+        "y": 31
       },
       "id": 23,
       "options": {
@@ -1594,7 +2058,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n)\n\nSELECT \n  facilities.name_${locale} as name, \n  COUNT(*)\nFROM (\n  SELECT * \n  FROM _scorecards s\n  WHERE \n    string_to_array(s.profile, ', ') && array[$profile]\n    AND s.dataset_id2 in ($dataset_id)\n) as t\nINNER JOIN facilities ON t.facility_id = facilities.id\nGROUP BY facilities.name_${locale};",
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n)\n\nSELECT \n  facilities.name_${locale} as name, \n  COUNT(*)\nFROM (\n  SELECT * \n  FROM _scorecards s\n  WHERE \n    s.dataset_id2 in ($dataset_id)\n) as t\nINNER JOIN facilities ON t.facility_id = facilities.id\nGROUP BY facilities.name_${locale};",
           "refId": "A",
           "select": [
             [
@@ -1695,7 +2159,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 22
+        "y": 31
       },
       "id": 38,
       "options": {
@@ -1734,7 +2198,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n)\n\nSELECT \n  (\n    CASE \n      WHEN sc.device_type = 'mobile' THEN '$scorecard_device_mobile'\n      ELSE '$scorecard_device_tablet'\n    END\n  ) as \"device_type\",\n  count(*)\nFROM _scorecards as sc\nWHERE \n  string_to_array(sc.profile, ', ') && array[$profile]\n  AND sc.dataset_id2 in ($dataset_id)\nGROUP BY sc.device_type;",
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n)\n\nSELECT \n  (\n    CASE \n      WHEN sc.device_type = 'mobile' THEN '$scorecard_device_mobile'\n      ELSE '$scorecard_device_tablet'\n    END\n  ) as \"device_type\",\n  count(*)\nFROM _scorecards as sc\nWHERE \n  sc.dataset_id2 in ($dataset_id)\nGROUP BY sc.device_type;",
           "refId": "A",
           "select": [
             [
@@ -1808,7 +2272,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "blue",
+                  "fixedColor": "#5794f2",
                   "mode": "fixed"
                 }
               }
@@ -1823,7 +2287,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "purple",
+                  "fixedColor": "green",
                   "mode": "fixed"
                 }
               }
@@ -1838,7 +2302,22 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "orange",
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ស្រី"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#5794f2",
                   "mode": "fixed"
                 }
               }
@@ -1850,7 +2329,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 30
+        "y": 39
       },
       "id": 5,
       "options": {
@@ -1889,7 +2368,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH pa AS (\n  SELECT\n    p.*,\n    (\n      CASE \n        WHEN gender = 'male' THEN '$participant_male'\n        WHEN gender = 'female' THEN '$participant_female'\n        ELSE '$participant_other'\n      END\n    ) as gender_km,\n    concat_ws (\n      ', ',\n      (CASE WHEN p.disability = true THEN 'Disability' END),\n      (CASE WHEN p.minority = true THEN 'Minority' END),\n      (CASE WHEN p.youth = true THEN 'Youth' END),\n      (CASE WHEN p.poor_card = true THEN 'ID Poor' END),\n      (CASE WHEN (p.disability = false AND p.minority = false AND p.youth = false AND p.poor_card = false) THEN 'N/A' END)\n    ) as profile\n  FROM participants AS p\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards s\n)\n\nSELECT\n  gender_km,\n  count(*)\nFROM pa\nINNER JOIN _scorecards s ON \n  pa.scorecard_uuid = s.id::varchar(255)\nWHERE \n  s.program_id in (${program_id})\n  AND $__timeFilter(s.conducted_date)\n  AND s.facility_id in ($facility_id)\n  AND s.year in ($year)\n  AND s.scorecard_type in ($scorecard_type)\n  AND s.province_id in ($province_id)\n  AND s.local_ngo_id in ($local_ngo_id)\n  AND s.deleted_at is null\n  AND s.completed_at is not null\n  AND pa.gender in ($gender)\n  AND pa.age BETWEEN ${age:raw}\n  AND string_to_array(pa.profile, ', ') && array[$profile]\n  AND s.dataset_id2 in ($dataset_id)\nGROUP BY gender_km\nORDER BY 1",
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws(\n      '',\n      (CASE WHEN s.dataset_id IS NULL THEN '' END),\n      (CASE WHEN s.dataset_id IS NOT NULL THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards AS s\n  WHERE \n    s.program_id IN (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type IN ($scorecard_type)\n    AND s.year IN ($year)\n    AND s.facility_id IN ($facility_id)\n    AND s.province_id IN ($province_id)\n    AND s.local_ngo_id IN ($local_ngo_id)\n    AND s.deleted_at IS NULL\n    AND s.completed_at IS NOT NULL\n),\n\n_conducted_scorecards AS (\n  SELECT s.*\n  FROM _scorecards s\n  WHERE s.dataset_id2 IN ($dataset_id)\n),\n\n_participants AS (\n  SELECT \n    p.*,\n    (\n      CASE \n        WHEN gender = 'male' THEN '$participant_male'\n        WHEN gender = 'female' THEN '$participant_female'\n        ELSE '$participant_other'\n      END\n    ) as gender_km\n  FROM participants AS p\n  WHERE \n    p.scorecard_uuid::integer IN (SELECT id FROM _conducted_scorecards)\n    AND p.countable = true\n)\n\nSELECT\n  gender_km,\n  count(*)\nFROM _participants\nGROUP BY gender_km\nORDER BY 1",
           "refId": "A",
           "select": [
             [
@@ -2050,7 +2529,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 30
+        "y": 39
       },
       "id": 35,
       "options": {
@@ -2089,7 +2568,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH pa AS (\n  SELECT\n    p.*,\n    (\n      CASE \n        WHEN age > 45 THEN '$participant_age > 45'\n        WHEN age > 30 THEN '$participant_age 31 - 45'\n        WHEN age > 14 THEN '$participant_age 15 - 30'\n        ELSE '$participant_age< 15'\n      END\n    ) as age_range,\n    concat_ws (\n      ', ',\n      (CASE WHEN p.disability = true THEN 'Disability' END),\n      (CASE WHEN p.minority = true THEN 'Minority' END),\n      (CASE WHEN p.youth = true THEN 'Youth' END),\n      (CASE WHEN p.poor_card = true THEN 'ID Poor' END),\n      (CASE WHEN (p.disability = false AND p.minority = false AND p.youth = false AND p.poor_card = false) THEN 'N/A' END)\n    ) as profile\n  FROM participants AS p\n),\n_scorecards AS (\n  SELECT\n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards s\n)\n\nSELECT\n  age_range,\n  count(*)\nFROM pa\nINNER JOIN _scorecards s ON \n  pa.scorecard_uuid = s.id::varchar(255)\nWHERE \n  s.program_id in (${program_id})\n  AND $__timeFilter(s.conducted_date)\n  AND s.facility_id in ($facility_id)\n  AND s.year in ($year)\n  AND s.scorecard_type in ($scorecard_type)\n  AND s.province_id in ($province_id)\n  AND s.local_ngo_id in ($local_ngo_id)\n  AND s.deleted_at is null\n  AND s.completed_at is not null\n  AND pa.gender in ($gender)\n  AND pa.age BETWEEN ${age:raw}\n  AND string_to_array(pa.profile, ', ') && array[$profile]\n  AND s.dataset_id2 in ($dataset_id)\nGROUP BY age_range\nORDER BY 1;\n",
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws(\n      '',\n      (CASE WHEN s.dataset_id IS NULL THEN '' END),\n      (CASE WHEN s.dataset_id IS NOT NULL THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards AS s\n  WHERE \n    s.program_id IN (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type IN ($scorecard_type)\n    AND s.year IN ($year)\n    AND s.facility_id IN ($facility_id)\n    AND s.province_id IN ($province_id)\n    AND s.local_ngo_id IN ($local_ngo_id)\n    AND s.deleted_at IS NULL\n    AND s.completed_at IS NOT NULL\n),\n\n_conducted_scorecards AS (\n  SELECT s.*\n  FROM _scorecards s\n  WHERE s.dataset_id2 IN ($dataset_id)\n),\n\n_participants AS (\n  SELECT \n    p.*,\n    (\n      CASE \n        WHEN age > 45 THEN '$participant_age > 45'\n        WHEN age > 30 THEN '$participant_age 31 - 45'\n        WHEN age > 14 THEN '$participant_age 15 - 30'\n        ELSE '$participant_age< 15'\n      END\n    ) as age_range\n  FROM participants AS p\n  WHERE \n    p.scorecard_uuid::integer IN (SELECT id FROM _conducted_scorecards)\n    AND p.countable = true\n)\n\nSELECT\n  age_range,\n  count(*)\nFROM _participants\nGROUP BY age_range\nORDER BY 1;\n",
           "refId": "A",
           "select": [
             [
@@ -2250,7 +2729,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "blue",
+                  "fixedColor": "#5794f2",
                   "mode": "fixed"
                 }
               }
@@ -2295,7 +2774,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "blue",
+                  "fixedColor": "#5794f2",
                   "mode": "fixed"
                 }
               }
@@ -2337,7 +2816,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 30
+        "y": 39
       },
       "id": 36,
       "options": {
@@ -2373,7 +2852,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH par AS (\n  (\n    SELECT participants.*, 'ID Poor' as profile, '$particiapnt_id_poor' as profile_km\n    FROM participants WHERE participants.poor_card is true\n  )\n  UNION ALL\n  (\n    SELECT participants.*, 'Disability' as profile, '$participant_disability' as profile_km\n    FROM participants WHERE participants.disability is true\n  )\n  UNION ALL\n  (\n    SELECT participants.*, 'Minority' as profile, '$participant_minority' as profile_km\n    FROM participants WHERE participants.minority is true\n  )\n  UNION ALL\n  (\n    SELECT participants.*, 'Youth' as profile, '$participant_youth' as profile_km\n    FROM participants WHERE participants.youth is true\n  )\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards s\n)\n\nSELECT \n  par.profile_km,\n  SUM(CASE WHEN par.gender = 'female' THEN 1 END) as \"$participant_female\",\n  SUM(CASE WHEN par.gender = 'male' THEN 1 END) as \"$participant_male\",\n  SUM(CASE WHEN par.gender = 'other' THEN 1 END) as \"$participant_other\"\nFROM par\nINNER JOIN _scorecards s ON par.scorecard_uuid = s.id::varchar(255)\nWHERE \n  s.program_id in (${program_id})\n  AND $__timeFilter(s.conducted_date)\n  AND s.facility_id in ($facility_id)\n  AND s.year in ($year)\n  AND s.scorecard_type in ($scorecard_type)\n  AND s.province_id in ($province_id)\n  AND s.local_ngo_id in ($local_ngo_id)\n  AND s.deleted_at is null\n  AND s.completed_at is not null\n  AND par.gender in ($gender)\n  AND par.age BETWEEN ${age:raw}\n  AND par.profile in ($profile)\n  AND s.dataset_id2 in ($dataset_id)\nGROUP BY par.profile_km\n",
+          "rawSql": "WITH par AS (\n  (\n    SELECT participants.*, 'ID Poor' as profile, '$particiapnt_id_poor' as profile_km\n    FROM participants WHERE participants.poor_card is true\n  )\n  UNION ALL\n  (\n    SELECT participants.*, 'Disability' as profile, '$participant_disability' as profile_km\n    FROM participants WHERE participants.disability is true\n  )\n  UNION ALL\n  (\n    SELECT participants.*, 'Minority' as profile, '$participant_minority' as profile_km\n    FROM participants WHERE participants.minority is true\n  )\n  UNION ALL\n  (\n    SELECT participants.*, 'Youth' as profile, '$participant_youth' as profile_km\n    FROM participants WHERE participants.youth is true\n  )\n),\n_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards s\n)\n\nSELECT \n  par.profile_km,\n  SUM(CASE WHEN par.gender = 'female' THEN 1 END) as \"$participant_female\",\n  SUM(CASE WHEN par.gender = 'male' THEN 1 END) as \"$participant_male\",\n  SUM(CASE WHEN par.gender = 'other' THEN 1 END) as \"$participant_other\"\nFROM par\nINNER JOIN _scorecards s ON par.scorecard_uuid = s.id::varchar(255)\nWHERE \n  s.program_id in (${program_id})\n  AND $__timeFilter(s.conducted_date)\n  AND s.facility_id in ($facility_id)\n  AND s.year in ($year)\n  AND s.scorecard_type in ($scorecard_type)\n  AND s.province_id in ($province_id)\n  AND s.local_ngo_id in ($local_ngo_id)\n  AND s.deleted_at is null\n  AND s.completed_at is not null\n  AND s.dataset_id2 in ($dataset_id)\nGROUP BY par.profile_km\n",
           "refId": "A",
           "select": [
             [
@@ -2474,7 +2953,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "yellow",
+                  "fixedColor": "green",
                   "mode": "fixed"
                 }
               }
@@ -2494,45 +2973,6 @@
                 }
               }
             ]
-          },
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "Proposed Count"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Proposed Count"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
           }
         ]
       },
@@ -2540,9 +2980,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 38
+        "y": 47
       },
-      "id": 43,
+      "id": 33,
       "options": {
         "barRadius": 0,
         "barWidth": 0.62,
@@ -2692,9 +3132,9 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 38
+        "y": 47
       },
-      "id": 33,
+      "id": 44,
       "options": {
         "barRadius": 0,
         "barWidth": 0.62,
@@ -2859,7 +3299,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 46
+        "y": 55
       },
       "id": 27,
       "options": {
@@ -3026,7 +3466,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 46
+        "y": 55
       },
       "id": 28,
       "options": {
@@ -3193,7 +3633,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 46
+        "y": 55
       },
       "id": 29,
       "options": {
@@ -3281,7 +3721,7 @@
         "h": 16,
         "w": 24,
         "x": 0,
-        "y": 54
+        "y": 63
       },
       "id": 11,
       "options": {
@@ -3364,7 +3804,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3392,7 +3832,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3420,7 +3860,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3610,7 +4050,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3638,7 +4078,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3666,7 +4106,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3694,7 +4134,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3722,7 +4162,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3824,8 +4264,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុកសរុប/កំពុងត្រួតពិនិត្យ/អនុវត្តរួចរាល់)",
-          "value": "ប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុកសរុប/កំពុងត្រួតពិនិត្យ/អនុវត្តរួចរាល់)"
+          "text": "ប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុកសរុប/កំពុងត្រួតពិនិត្យ/អនុម័ត)",
+          "value": "ប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុកសរុប/កំពុងត្រួតពិនិត្យ/អនុម័ត)"
         },
         "datasource": {
           "type": "postgres",
@@ -3847,8 +4287,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុកសរុប/កំពុងត្រួតពិនិត្យ/អនុវត្តរួចរាល់)",
-          "value": "ប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុកសរុប/កំពុងត្រួតពិនិត្យ/អនុវត្តរួចរាល់)"
+          "text": "<h5>ប័ណ្ណដាក់ពិន្ទុសរុប៖ គ្រោងទុក ១០ / កំពុងត្រួតពិនិត្យ ៥ / បានអនុម័ត ៣</h5>\n<p>\n  នេះបង្ហាញពីដំណើរការរបស់ Scorecard តាមដំណាក់កាល៖\n  <strong>១០ កំពុងស្ថិតក្នុងគម្រោង ៥ កំពុងពិនិត្យ និង ៣ បានអនុម័ត</strong>\n  សរុបមាន <strong>១៨ Scorecards</strong>។\n</p>\n<p>\n  <strong>ឧទាហរណ៍៖</strong> អ្នកគ្រប់គ្រងបង្កើត Scorecard សម្រាប់ការវាយតម្លៃការងារត្រីមាសទី ៣\n  ហើយវាចាប់ផ្តើមដោយ Status <em>គ្រោងទុក</em>។ នៅពេលប័ណ្ណដាក់ពិន្ទុត្រូវបានបំពេញ\n  និងដាក់ស្នើសម្រាប់ការវាយតម្លៃ វានឹងប្តូរ Status ទៅជា <em>កំពុងត្រួតពិនិត្យ</em>។\n  បន្ទាប់ពីអ្នកពិនិត្យបានអនុម័ត វានឹងប្តូរ Status ទៅជា <em>បានអនុម័ត</em>។\n</p>",
+          "value": "<h5>ប័ណ្ណដាក់ពិន្ទុសរុប៖ គ្រោងទុក ១០ / កំពុងត្រួតពិនិត្យ ៥ / បានអនុម័ត ៣</h5>\n<p>\n  នេះបង្ហាញពីដំណើរការរបស់ Scorecard តាមដំណាក់កាល៖\n  <strong>១០ កំពុងស្ថិតក្នុងគម្រោង ៥ កំពុងពិនិត្យ និង ៣ បានអនុម័ត</strong>\n  សរុបមាន <strong>១៨ Scorecards</strong>។\n</p>\n<p>\n  <strong>ឧទាហរណ៍៖</strong> អ្នកគ្រប់គ្រងបង្កើត Scorecard សម្រាប់ការវាយតម្លៃការងារត្រីមាសទី ៣\n  ហើយវាចាប់ផ្តើមដោយ Status <em>គ្រោងទុក</em>។ នៅពេលប័ណ្ណដាក់ពិន្ទុត្រូវបានបំពេញ\n  និងដាក់ស្នើសម្រាប់ការវាយតម្លៃ វានឹងប្តូរ Status ទៅជា <em>កំពុងត្រួតពិនិត្យ</em>។\n  បន្ទាប់ពីអ្នកពិនិត្យបានអនុម័ត វានឹងប្តូរ Status ទៅជា <em>បានអនុម័ត</em>។\n</p>"
         },
         "datasource": {
           "type": "postgres",
@@ -3893,8 +4333,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ចំនួនប័ណ្ណដាក់ពិន្ទុដែលបានបញ្ចូលទិន្នន័យក្រោយថ្ងៃអនុវត្តជាក់ស្តែង <br>Fomular: (Entry date - Conducted date >= 1 Day) <br>ឧទាហរណ៍៖ ថ្ងៃអនុវត្តប័ណ្ណដាក់ពិន្ទុជាក់ស្តែង 01-មករា-2022 តែ ថ្ងៃបញ្ចូលទិន្នន័យ 03-មករា-2022។",
-          "value": "ចំនួនប័ណ្ណដាក់ពិន្ទុដែលបានបញ្ចូលទិន្នន័យក្រោយថ្ងៃអនុវត្តជាក់ស្តែង <br>Fomular: (Entry date - Conducted date >= 1 Day) <br>ឧទាហរណ៍៖ ថ្ងៃអនុវត្តប័ណ្ណដាក់ពិន្ទុជាក់ស្តែង 01-មករា-2022 តែ ថ្ងៃបញ្ចូលទិន្នន័យ 03-មករា-2022។"
+          "text": "<div lang=\"km-KH\">\n<p><strong>ចំនួនប័ណ្ណដាក់ពិន្ទុដែលបានបញ្ចូលទិន្នន័យក្រោយថ្ងៃអនុវត្តជាក់ស្តែង</strong></p>\n<p>សូចនាករនេះបង្ហាញពីចំនួនប័ណ្ណដាក់ពិន្ទុ ដែលថ្ងៃបញ្ចូលទិន្នន័យ (Entry Date) មានរយៈពេលយ៉ាងតិច ១ ថ្ងៃ ក្រោយពីថ្ងៃដែលបានអនុវត្តជាក់ស្តែង (Conducted Date)។</p>\n<p><strong>រូបមន្ត (Formula):</strong><br>\nEntry Date − Conducted Date ≥ 1 Day</p>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nថ្ងៃអនុវត្តប័ណ្ណដាក់ពិន្ទុជាក់ស្តែង៖ 01-មករា-2022<br>\nថ្ងៃបញ្ចូលទិន្នន័យ៖ 03-មករា-2022<br>\n→ ករណីនេះត្រូវបានរាប់បញ្ចូល ព្រោះមានចន្លោះពេល ២ ថ្ងៃ (≥ 1 Day)។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>ចំនួនប័ណ្ណដាក់ពិន្ទុដែលបានបញ្ចូលទិន្នន័យក្រោយថ្ងៃអនុវត្តជាក់ស្តែង</strong></p>\n<p>សូចនាករនេះបង្ហាញពីចំនួនប័ណ្ណដាក់ពិន្ទុ ដែលថ្ងៃបញ្ចូលទិន្នន័យ (Entry Date) មានរយៈពេលយ៉ាងតិច ១ ថ្ងៃ ក្រោយពីថ្ងៃដែលបានអនុវត្តជាក់ស្តែង (Conducted Date)។</p>\n<p><strong>រូបមន្ត (Formula):</strong><br>\nEntry Date − Conducted Date ≥ 1 Day</p>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nថ្ងៃអនុវត្តប័ណ្ណដាក់ពិន្ទុជាក់ស្តែង៖ 01-មករា-2022<br>\nថ្ងៃបញ្ចូលទិន្នន័យ៖ 03-មករា-2022<br>\n→ ករណីនេះត្រូវបានរាប់បញ្ចូល ព្រោះមានចន្លោះពេល ២ ថ្ងៃ (≥ 1 Day)។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -3916,8 +4356,8 @@
       {
         "current": {
           "selected": false,
-          "text": "រយៈពេលអនុវត្តប័ណ្ណដាក់ពិន្ទុ (កាលបរិច្ឆេទចាប់ផ្ដើមដល់អនុវត្តរួចរាល់)",
-          "value": "រយៈពេលអនុវត្តប័ណ្ណដាក់ពិន្ទុ (កាលបរិច្ឆេទចាប់ផ្ដើមដល់អនុវត្តរួចរាល់)"
+          "text": "រយៈពេលអនុវត្តប័ណ្ណដាក់ពិន្ទុ (កាលបរិច្ឆេទចាប់ផ្ដើមដល់អនុម័ត)",
+          "value": "រយៈពេលអនុវត្តប័ណ្ណដាក់ពិន្ទុ (កាលបរិច្ឆេទចាប់ផ្ដើមដល់អនុម័ត)"
         },
         "datasource": {
           "type": "postgres",
@@ -3939,8 +4379,8 @@
       {
         "current": {
           "selected": false,
-          "text": "រយៈពេលអនុវត្តប័ណ្ណដាក់ពិន្ទុ (កាលបរិច្ឆេទចាប់ផ្ដើមដល់អនុវត្តរួចរាល់)",
-          "value": "រយៈពេលអនុវត្តប័ណ្ណដាក់ពិន្ទុ (កាលបរិច្ឆេទចាប់ផ្ដើមដល់អនុវត្តរួចរាល់)"
+          "text": "<div lang=\"km-KH\">\n<p><strong>រយៈពេលអនុវត្តប័ណ្ណដាក់ពិន្ទុ (កាលបរិច្ឆេទចាប់ផ្តើមដល់អនុម័ត)</strong></p>\n<p>សូចនាករនេះវាស់ស្ទង់ចំនួនថ្ងៃ រវាង <strong>ថ្ងៃចាប់ផ្តើម</strong> និង <strong>ថ្ងៃអនុម័ត</strong> របស់ប័ណ្ណដាក់ពិន្ទុនីមួយៗ ដោយបង្ហាញរយៈពេលអប្បបរមា មធ្យម និងអតិបរមា ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តទាំងអស់។</p>\n<p><strong>រូបមន្ត (Formula):</strong><br>\nរយៈពេល (ថ្ងៃ) = ថ្ងៃអនុម័ត − ថ្ងៃចាប់ផ្តើម</p>\n<p><strong>តម្លៃបច្ចុប្បន្ន៖</strong><br>\nអប្បបរមា៖ ១ ថ្ងៃ<br>\nមធ្យម៖ ១៧ ថ្ងៃ<br>\nអតិបរមា៖ ៣៦ ថ្ងៃ</p>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើប័ណ្ណដាក់ពិន្ទុមួយចាប់ផ្តើមនៅថ្ងៃ 01-មករា-2022 និងត្រូវបានអនុម័តនៅថ្ងៃ 18-មករា-2022 នោះរយៈពេលគឺ ១៧ ថ្ងៃ ដែលនៅជិតនឹងតម្លៃមធ្យម។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>រយៈពេលអនុវត្តប័ណ្ណដាក់ពិន្ទុ (កាលបរិច្ឆេទចាប់ផ្តើមដល់អនុម័ត)</strong></p>\n<p>សូចនាករនេះវាស់ស្ទង់ចំនួនថ្ងៃ រវាង <strong>ថ្ងៃចាប់ផ្តើម</strong> និង <strong>ថ្ងៃអនុម័ត</strong> របស់ប័ណ្ណដាក់ពិន្ទុនីមួយៗ ដោយបង្ហាញរយៈពេលអប្បបរមា មធ្យម និងអតិបរមា ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តទាំងអស់។</p>\n<p><strong>រូបមន្ត (Formula):</strong><br>\nរយៈពេល (ថ្ងៃ) = ថ្ងៃអនុម័ត − ថ្ងៃចាប់ផ្តើម</p>\n<p><strong>តម្លៃបច្ចុប្បន្ន៖</strong><br>\nអប្បបរមា៖ ១ ថ្ងៃ<br>\nមធ្យម៖ ១៧ ថ្ងៃ<br>\nអតិបរមា៖ ៣៦ ថ្ងៃ</p>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើប័ណ្ណដាក់ពិន្ទុមួយចាប់ផ្តើមនៅថ្ងៃ 01-មករា-2022 និងត្រូវបានអនុម័តនៅថ្ងៃ 18-មករា-2022 នោះរយៈពេលគឺ ១៧ ថ្ងៃ ដែលនៅជិតនឹងតម្លៃមធ្យម។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -3985,8 +4425,8 @@
       {
         "current": {
           "selected": false,
-          "text": "LNGOs: រាប់តាម Planned Scorecard <br>CAFs: រាប់តាម LNGO <br>អ្នកចូលរួម: រាប់តាម Completed Scorecard",
-          "value": "LNGOs: រាប់តាម Planned Scorecard <br>CAFs: រាប់តាម LNGO <br>អ្នកចូលរួម: រាប់តាម Completed Scorecard"
+          "text": "<div lang=\"km-KH\">\n<p><strong>ចំនួន (LNGOs សរុប / CAFs សរុប / អ្នកចូលរួមសរុប / អ្នកចូលរួមជាមធ្យម)</strong></p>\n<p>សូចនាករនេះបង្ហាញលេខចំនួន ៤ ប្រភេទរួមគ្នា៖</p>\n<ul>\n  <li><strong>LNGOs</strong> — រាប់តាម <em>Planned Scorecard</em></li>\n  <li><strong>CAFs</strong> — រាប់តាម <em>LNGO</em></li>\n  <li><strong>អ្នកចូលរួម</strong> — រាប់តាម <em>Approved Scorecard</em></li>\n  <li><strong>អ្នកចូលរួមជាមធ្យម</strong> — ចំនួនអ្នកចូលរួមជាមធ្យមក្នុងមួយប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើមាន LNGOs ចំនួន ៤ ដែលភ្ជាប់ជាមួយ CAFs ជាច្រើន ហើយប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តកត់ត្រាអ្នកចូលរួមសរុប ១៤១នាក់ នោះចំនួនអ្នកចូលរួមជាមធ្យមត្រូវបានគណនាដោយចែកអ្នកចូលរួមសរុប នឹងចំនួនប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>ចំនួន (LNGOs សរុប / CAFs សរុប / អ្នកចូលរួមសរុប / អ្នកចូលរួមជាមធ្យម)</strong></p>\n<p>សូចនាករនេះបង្ហាញលេខចំនួន ៤ ប្រភេទរួមគ្នា៖</p>\n<ul>\n  <li><strong>LNGOs</strong> — រាប់តាម <em>Planned Scorecard</em></li>\n  <li><strong>CAFs</strong> — រាប់តាម <em>LNGO</em></li>\n  <li><strong>អ្នកចូលរួម</strong> — រាប់តាម <em>Approved Scorecard</em></li>\n  <li><strong>អ្នកចូលរួមជាមធ្យម</strong> — ចំនួនអ្នកចូលរួមជាមធ្យមក្នុងមួយប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើមាន LNGOs ចំនួន ៤ ដែលភ្ជាប់ជាមួយ CAFs ជាច្រើន ហើយប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តកត់ត្រាអ្នកចូលរួមសរុប ១៤១នាក់ នោះចំនួនអ្នកចូលរួមជាមធ្យមត្រូវបានគណនាដោយចែកអ្នកចូលរួមសរុប នឹងចំនួនប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4031,8 +4471,8 @@
       {
         "current": {
           "selected": false,
-          "text": "Indicator ស្នើឡើង សរុប: រាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br>Indicator អាទិភាព សរុប: រាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br>",
-          "value": "Indicator ស្នើឡើង សរុប: រាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br>Indicator អាទិភាព សរុប: រាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br>"
+          "text": "<div lang=\"km-KH\">\n<p><strong>ចំនួនសរុប Indicator (ស្នើឡើង / ស្នើឡើងថ្មី / អាទិភាព)</strong></p>\n<p>រាប់ indicator ដែលបានលើកឡើងពីប័ណ្ណដាក់ពិន្ទុដែលបានបំពេញ៖</p>\n<ul>\n  <li><strong>ស្នើឡើង (សរុប)</strong> — indicator ដែលបានលើកឡើងទាំងអស់</li>\n  <li><strong>ស្នើឡើងថ្មី (សរុប)</strong> — indicator ប្រភេទ custom (បន្ថែមដោយអ្នកប្រើប្រាស់)</li>\n  <li><strong>អាទិភាព (សរុប)</strong> — indicator ដែលជ្រើសយកទៅដាក់ពិន្ទុ</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ប័ណ្ណដាក់ពិន្ទុមួយលើកឡើង indicator ៥ — ថ្មី ២ អាទិភាព ១។ វានឹងបូកបញ្ចូល ៥ ទៅ ស្នើឡើង, ២ ទៅ ស្នើឡើងថ្មី, និង ១ ទៅ អាទិភាព។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>ចំនួនសរុប Indicator (ស្នើឡើង / ស្នើឡើងថ្មី / អាទិភាព)</strong></p>\n<p>រាប់ indicator ដែលបានលើកឡើងពីប័ណ្ណដាក់ពិន្ទុដែលបានបំពេញ៖</p>\n<ul>\n  <li><strong>ស្នើឡើង (សរុប)</strong> — indicator ដែលបានលើកឡើងទាំងអស់</li>\n  <li><strong>ស្នើឡើងថ្មី (សរុប)</strong> — indicator ប្រភេទ custom (បន្ថែមដោយអ្នកប្រើប្រាស់)</li>\n  <li><strong>អាទិភាព (សរុប)</strong> — indicator ដែលជ្រើសយកទៅដាក់ពិន្ទុ</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ប័ណ្ណដាក់ពិន្ទុមួយលើកឡើង indicator ៥ — ថ្មី ២ អាទិភាព ១។ វានឹងបូកបញ្ចូល ៥ ទៅ ស្នើឡើង, ២ ទៅ ស្នើឡើងថ្មី, និង ១ ទៅ អាទិភាព។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4077,8 +4517,8 @@
       {
         "current": {
           "selected": false,
-          "text": "Indicator ស្នើឡើង ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់<br> Indicator ស្នើឡើងថ្មី ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br> Indicator អាទិភាព ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br/> - សម្គាល់៖ លទ្ធផលបង្គត់ឡើង(Ex: 0.3 -> 1)",
-          "value": "Indicator ស្នើឡើង ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់<br> Indicator ស្នើឡើងថ្មី ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br> Indicator អាទិភាព ជាមធ្យម: ក្នុង 1 ប័ណ្ណដាក់ពិន្ទុដែលបានអនុវត្តរួចរាល់ <br/> - សម្គាល់៖ លទ្ធផលបង្គត់ឡើង(Ex: 0.3 -> 1)"
+          "text": "<div lang=\"km-KH\">\n<p><strong>ចំនួនមធ្យម Indicator (ស្នើឡើង / ស្នើឡើងថ្មី / អាទិភាព)</strong></p>\n<p>បង្ហាញចំនួនមធ្យម indicator ដែលបានលើកឡើង ក្នុងមួយប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត៖</p>\n<ul>\n  <li><strong>ស្នើឡើង (មធ្យម)</strong> — មធ្យមនៃ indicator ដែលបានលើកឡើងទាំងអស់ ក្នុងមួយប័ណ្ណដែលបានអនុម័ត</li>\n  <li><strong>ស្នើឡើងថ្មី (មធ្យម)</strong> — មធ្យមនៃ indicator ប្រភេទ custom ក្នុងមួយប័ណ្ណដែលបានអនុម័ត</li>\n  <li><strong>អាទិភាព (មធ្យម)</strong> — មធ្យមនៃ indicator ដែលបានសម្គាល់ជា selected ក្នុងមួយប័ណ្ណដែលបានអនុម័ត</li>\n</ul>\n<p><strong>សម្គាល់៖</strong> លទ្ធផលបង្គត់ឡើង (ឧ. 0.3 → 1)។</p>\n<p><strong>ឧទាហរណ៍៖</strong> ប្រសិនបើប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត មាន Proposed Indicators មធ្យម 0.3 នោះលេខបង្ហាញនឹងបង្គត់ឡើងទៅ 1។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>ចំនួនមធ្យម Indicator (ស្នើឡើង / ស្នើឡើងថ្មី / អាទិភាព)</strong></p>\n<p>បង្ហាញចំនួនមធ្យម indicator ដែលបានលើកឡើង ក្នុងមួយប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត៖</p>\n<ul>\n  <li><strong>ស្នើឡើង (មធ្យម)</strong> — មធ្យមនៃ indicator ដែលបានលើកឡើងទាំងអស់ ក្នុងមួយប័ណ្ណដែលបានអនុម័ត</li>\n  <li><strong>ស្នើឡើងថ្មី (មធ្យម)</strong> — មធ្យមនៃ indicator ប្រភេទ custom ក្នុងមួយប័ណ្ណដែលបានអនុម័ត</li>\n  <li><strong>អាទិភាព (មធ្យម)</strong> — មធ្យមនៃ indicator ដែលបានសម្គាល់ជា selected ក្នុងមួយប័ណ្ណដែលបានអនុម័ត</li>\n</ul>\n<p><strong>សម្គាល់៖</strong> លទ្ធផលបង្គត់ឡើង (ឧ. 0.3 → 1)។</p>\n<p><strong>ឧទាហរណ៍៖</strong> ប្រសិនបើប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត មាន Proposed Indicators មធ្យម 0.3 នោះលេខបង្ហាញនឹងបង្គត់ឡើងទៅ 1។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4100,8 +4540,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ប័ណ្ណដាក់ពិន្ទុសរុប (អនុវត្តរួចរាល់ vs គ្រោងទុក) តាមប្រភេទសេវា",
-          "value": "ប័ណ្ណដាក់ពិន្ទុសរុប (អនុវត្តរួចរាល់ vs គ្រោងទុក) តាមប្រភេទសេវា"
+          "text": "ប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុក vs អនុម័ត) តាមប្រភេទសេវា",
+          "value": "ប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុក vs អនុម័ត) តាមប្រភេទសេវា"
         },
         "datasource": {
           "type": "postgres",
@@ -4123,8 +4563,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ប័ណ្ណដាក់ពិន្ទុសរុប (អនុវត្តរួចរាល់ vs គ្រោងទុក) តាមប្រភេទសេវា",
-          "value": "ប័ណ្ណដាក់ពិន្ទុសរុប (អនុវត្តរួចរាល់ vs គ្រោងទុក) តាមប្រភេទសេវា"
+          "text": "<div lang=\"km-KH\">\n<p><strong>ចំនួនប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុក vs អនុម័ត) តាមប្រភេទសេវា</strong></p>\n<p>តារាងនេះប្រៀបធៀបចំនួនប័ណ្ណដាក់ពិន្ទុ <strong>ដែលបានគ្រោងទុក (Planned)</strong> និង <strong>ដែលបានអនុម័ត (Approved)</strong> តាមប្រភេទសេវានីមួយៗ ដើម្បីមើលឃើញភាពខុសគ្នារវាងផែនការ និងលទ្ធផលពិតប្រាកដ។</p>\n<p><strong>តម្លៃបច្ចុប្បន្ន៖</strong></p>\n<ul>\n  <li>រដ្ឋបាលឃុំ — គ្រោងទុក 6 / បានអនុម័ត 5</li>\n  <li>រោងចក្រកាត់ដេរ — គ្រោងទុក 9 / បានអនុម័ត 3</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> សម្រាប់រោងចក្រកាត់ដេរ មានប័ណ្ណដាក់ពិន្ទុត្រូវបានគម្រោង 9 ប៉ុន្តែមានតែ 3 ប៉ុណ្ណោះដែលបានអនុម័ត — បង្ហាញពីគម្លាតចំនួន 6 ប័ណ្ណដែលមិនទាន់បញ្ចប់។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>ចំនួនប័ណ្ណដាក់ពិន្ទុសរុប (គ្រោងទុក vs អនុម័ត) តាមប្រភេទសេវា</strong></p>\n<p>តារាងនេះប្រៀបធៀបចំនួនប័ណ្ណដាក់ពិន្ទុ <strong>ដែលបានគ្រោងទុក (Planned)</strong> និង <strong>ដែលបានអនុម័ត (Approved)</strong> តាមប្រភេទសេវានីមួយៗ ដើម្បីមើលឃើញភាពខុសគ្នារវាងផែនការ និងលទ្ធផលពិតប្រាកដ។</p>\n<p><strong>តម្លៃបច្ចុប្បន្ន៖</strong></p>\n<ul>\n  <li>រដ្ឋបាលឃុំ — គ្រោងទុក 6 / បានអនុម័ត 5</li>\n  <li>រោងចក្រកាត់ដេរ — គ្រោងទុក 9 / បានអនុម័ត 3</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> សម្រាប់រោងចក្រកាត់ដេរ មានប័ណ្ណដាក់ពិន្ទុត្រូវបានគម្រោង 9 ប៉ុន្តែមានតែ 3 ប៉ុណ្ណោះដែលបានអនុម័ត — បង្ហាញពីគម្លាតចំនួន 6 ប័ណ្ណដែលមិនទាន់បញ្ចប់។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4146,8 +4586,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍) តាមប្រភេទសេវា",
-          "value": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍) តាមប្រភេទសេវា"
+          "text": "ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាមប្រភេទប័ណ្ណដាក់ពិន្ទុ",
+          "value": "ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាមប្រភេទប័ណ្ណដាក់ពិន្ទុ"
         },
         "datasource": {
           "type": "postgres",
@@ -4169,8 +4609,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍) តាមប្រភេទសេវា",
-          "value": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់ (វាយតម្លៃខ្លួនឯង vs ប័ណ្ណដាក់ពិន្ទុសហគមន៍) តាមប្រភេទសេវា"
+          "text": "<div lang=\"km-KH\" style=\"margin-bottom: 16px;\">\n<p><strong>ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាមប្រភេទប័ណ្ណដាក់ពិន្ទុ</strong></p>\n<p>តារាងនេះប្រៀបធៀបប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត តាមប្រភេទប័ណ្ណដាក់ពិន្ទុនីមួយៗ ដោយបែងចែកជា ៣ ប្រភេទ៖</p>\n<ul>\n  <li><strong>វាយតម្លៃដោយខ្លួនឯង (Self-Assessment)</strong> — កិច្ចប្រជុំប័ណ្ណដាក់ពិន្ទុដែលធ្វើឡើងជាមួយថ្នាក់គ្រប់គ្រង ឬអ្នកមានសិទ្ធិសម្រេច (ភាគីផ្គត់ផ្គង់)</li>\n  <li><strong>ប័ណ្ណដាក់ពិន្ទុសហគមន៍ (Community Scorecard)</strong> — កិច្ចប្រជុំប័ណ្ណដាក់ពិន្ទុដែលធ្វើឡើងជាមួយសមាជិកសហគមន៍ ឬកម្មកររោងចក្រ (ភាគីទាមទារ)</li>\n  <li><strong>ប័ណ្ណដាក់ពិន្ទុរួម (Self-Assessment + Community Scorecard)</strong> — កិច្ចប្រជុំប័ណ្ណដាក់ពិន្ទុដែលបញ្ចូលគ្នារវាងថ្នាក់គ្រប់គ្រង/អ្នកមានសិទ្ធិសម្រេច និងសមាជិកសហគមន៍/កម្មកររោងចក្រ</li>\n</ul>\n<p><strong>តម្លៃបច្ចុប្បន្ន៖</strong></p>\n<ul>\n  <li>មណ្ឌលសុខភាព — ការវាយតម្លៃដោយខ្លួនឯង៖ 11 / ប័ណ្ណដាក់ពិន្ទុសហគមន៍៖ 0 / ប័ណ្ណដាក់ពិន្ទុរួម៖ 0</li>\n  <li>រោងចក្រកាត់ដេរ — ការវាយតម្លៃដោយខ្លួនឯង៖ 0 / ប័ណ្ណដាក់ពិន្ទុសហគមន៍៖ 0 / ប័ណ្ណដាក់ពិន្ទុរួម៖ 3</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> សម្រាប់រោងចក្រកាត់ដេរ ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តទាំង ៣ ស្ថិតនៅក្នុងប្រភេទ \"ប័ណ្ណដាក់ពិន្ទុរួម\" ដោយគ្មានប័ណ្ណវាយតម្លៃដោយខ្លួនឯង ឬប័ណ្ណដាក់ពិន្ទុសហគមន៍ដាច់ដោយឡែកកត់ត្រាទេ។</p>\n</div>",
+          "value": "<div lang=\"km-KH\" style=\"margin-bottom: 16px;\">\n<p><strong>ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាមប្រភេទប័ណ្ណដាក់ពិន្ទុ</strong></p>\n<p>តារាងនេះប្រៀបធៀបប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត តាមប្រភេទប័ណ្ណដាក់ពិន្ទុនីមួយៗ ដោយបែងចែកជា ៣ ប្រភេទ៖</p>\n<ul>\n  <li><strong>វាយតម្លៃដោយខ្លួនឯង (Self-Assessment)</strong> — កិច្ចប្រជុំប័ណ្ណដាក់ពិន្ទុដែលធ្វើឡើងជាមួយថ្នាក់គ្រប់គ្រង ឬអ្នកមានសិទ្ធិសម្រេច (ភាគីផ្គត់ផ្គង់)</li>\n  <li><strong>ប័ណ្ណដាក់ពិន្ទុសហគមន៍ (Community Scorecard)</strong> — កិច្ចប្រជុំប័ណ្ណដាក់ពិន្ទុដែលធ្វើឡើងជាមួយសមាជិកសហគមន៍ ឬកម្មកររោងចក្រ (ភាគីទាមទារ)</li>\n  <li><strong>ប័ណ្ណដាក់ពិន្ទុរួម (Self-Assessment + Community Scorecard)</strong> — កិច្ចប្រជុំប័ណ្ណដាក់ពិន្ទុដែលបញ្ចូលគ្នារវាងថ្នាក់គ្រប់គ្រង/អ្នកមានសិទ្ធិសម្រេច និងសមាជិកសហគមន៍/កម្មកររោងចក្រ</li>\n</ul>\n<p><strong>តម្លៃបច្ចុប្បន្ន៖</strong></p>\n<ul>\n  <li>មណ្ឌលសុខភាព — ការវាយតម្លៃដោយខ្លួនឯង៖ 11 / ប័ណ្ណដាក់ពិន្ទុសហគមន៍៖ 0 / ប័ណ្ណដាក់ពិន្ទុរួម៖ 0</li>\n  <li>រោងចក្រកាត់ដេរ — ការវាយតម្លៃដោយខ្លួនឯង៖ 0 / ប័ណ្ណដាក់ពិន្ទុសហគមន៍៖ 0 / ប័ណ្ណដាក់ពិន្ទុរួម៖ 3</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> សម្រាប់រោងចក្រកាត់ដេរ ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តទាំង ៣ ស្ថិតនៅក្នុងប្រភេទ \"ប័ណ្ណដាក់ពិន្ទុរួម\" ដោយគ្មានប័ណ្ណវាយតម្លៃដោយខ្លួនឯង ឬប័ណ្ណដាក់ពិន្ទុសហគមន៍ដាច់ដោយឡែកកត់ត្រាទេ។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4192,8 +4632,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់តាម Type",
-          "value": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់តាម Type"
+          "text": "ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាម Scorecard Type",
+          "value": "ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាម Scorecard Type"
         },
         "datasource": {
           "type": "postgres",
@@ -4215,8 +4655,8 @@
       {
         "current": {
           "selected": false,
-          "text": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍",
-          "value": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍"
+          "text": "<div lang=\"km-KH\">\n<p><strong>ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាម Scorecard Type</strong></p>\n<p>ក្រាបនេះបង្ហាញសមាមាត្រនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត បែងចែកតាមប្រភេទ៖</p>\n<ul>\n  <li><strong>វាយតម្លៃដោយខ្លួនឯង (Self-Assessment)</strong> — 51 ប័ណ្ណ (94%)</li>\n  <li><strong>ប័ណ្ណដាក់ពិន្ទុរួម (Self-Assessment + Community Scorecard)</strong> — 3 ប័ណ្ណ (6%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តសរុប 54 ភាគច្រើន (51) ជាការវាយតម្លៃដោយខ្លួនឯង ខណៈមានតែ 3 ប៉ុណ្ណោះជាប័ណ្ណដាក់ពិន្ទុរួម (ធ្វើឡើងរួមគ្នារវាងថ្នាក់គ្រប់គ្រង និងសហគមន៍/កម្មករ)។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាម Scorecard Type</strong></p>\n<p>ក្រាបនេះបង្ហាញសមាមាត្រនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត បែងចែកតាមប្រភេទ៖</p>\n<ul>\n  <li><strong>វាយតម្លៃដោយខ្លួនឯង (Self-Assessment)</strong> — 51 ប័ណ្ណ (94%)</li>\n  <li><strong>ប័ណ្ណដាក់ពិន្ទុរួម (Self-Assessment + Community Scorecard)</strong> — 3 ប័ណ្ណ (6%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តសរុប 54 ភាគច្រើន (51) ជាការវាយតម្លៃដោយខ្លួនឯង ខណៈមានតែ 3 ប៉ុណ្ណោះជាប័ណ្ណដាក់ពិន្ទុរួម (ធ្វើឡើងរួមគ្នារវាងថ្នាក់គ្រប់គ្រង និងសហគមន៍/កម្មករ)។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4238,8 +4678,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់តាមប្រភេទសេវា",
-          "value": "ប័ណ្ណដាក់ពិន្ទុដែលអនុវត្តរួចរាល់តាមប្រភេទសេវា"
+          "text": "ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាមប្រភេទសេវា",
+          "value": "ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាមប្រភេទសេវា"
         },
         "datasource": {
           "type": "postgres",
@@ -4261,8 +4701,8 @@
       {
         "current": {
           "selected": false,
-          "text": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍",
-          "value": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍"
+          "text": "<div lang=\"km-KH\">\n<p><strong>ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាមប្រភេទសេវា</strong></p>\n<p>ក្រាបនេះបង្ហាញការចែកចាយនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត តាមប្រភេទសេវានីមួយៗ។ <em>របាយការណ៍នេះរួមបញ្ចូលតែប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តប៉ុណ្ណោះ។</em></p>\n<ul>\n  <li><strong>រដ្ឋបាលឃុំ</strong> — 20 ប័ណ្ណ (37%)</li>\n  <li><strong>សាលាបឋមសិក្សា</strong> — 20 ប័ណ្ណ (37%)</li>\n  <li><strong>មណ្ឌលសុខភាព</strong> — 11 ប័ណ្ណ (20%)</li>\n  <li><strong>រោងចក្រកាត់ដេរ</strong> — 3 ប័ណ្ណ (6%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តសរុប 54 រដ្ឋបាលឃុំ និងសាលាបឋមសិក្សា មានចំណែកធំបំផុតស្មើគ្នា (37% និមួយៗ) ខណៈរោងចក្រកាត់ដេរមានចំណែកតូចបំផុត (6%)។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តតាមប្រភេទសេវា</strong></p>\n<p>ក្រាបនេះបង្ហាញការចែកចាយនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត តាមប្រភេទសេវានីមួយៗ។ <em>របាយការណ៍នេះរួមបញ្ចូលតែប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តប៉ុណ្ណោះ។</em></p>\n<ul>\n  <li><strong>រដ្ឋបាលឃុំ</strong> — 20 ប័ណ្ណ (37%)</li>\n  <li><strong>សាលាបឋមសិក្សា</strong> — 20 ប័ណ្ណ (37%)</li>\n  <li><strong>មណ្ឌលសុខភាព</strong> — 11 ប័ណ្ណ (20%)</li>\n  <li><strong>រោងចក្រកាត់ដេរ</strong> — 3 ប័ណ្ណ (6%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តសរុប 54 រដ្ឋបាលឃុំ និងសាលាបឋមសិក្សា មានចំណែកធំបំផុតស្មើគ្នា (37% និមួយៗ) ខណៈរោងចក្រកាត់ដេរមានចំណែកតូចបំផុត (6%)។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4307,8 +4747,8 @@
       {
         "current": {
           "selected": false,
-          "text": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍ដោយ អ្នកសម្របសម្រួលគណនេយ្យភាពសហគមន៍(CAF)",
-          "value": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍ដោយ អ្នកសម្របសម្រួលគណនេយ្យភាពសហគមន៍(CAF)"
+          "text": "<div lang=\"km-KH\">\n<p><strong>ការអនុវត្តប័ណ្ណដាក់ពិន្ទុបែងចែកតាមប្រភេទឧបករណ៍</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត តាមប្រភេទឧបករណ៍ដែលបានប្រើសម្រាប់បញ្ចូលទិន្នន័យ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ទូរស័ព្ទចល័ត</strong> — 64 ប័ណ្ណ (69%)</li>\n  <li><strong>ថេប្លេត</strong> — 29 ប័ណ្ណ (31%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តសរុប 93 ភាគច្រើន (64) ត្រូវបានបញ្ចូលទិន្នន័យតាមទូរស័ព្ទចល័ត ខណៈ 29 ត្រូវបានបញ្ចូលតាមថេប្លេត។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>ការអនុវត្តប័ណ្ណដាក់ពិន្ទុបែងចែកតាមប្រភេទឧបករណ៍</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត តាមប្រភេទឧបករណ៍ដែលបានប្រើសម្រាប់បញ្ចូលទិន្នន័យ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ទូរស័ព្ទចល័ត</strong> — 64 ប័ណ្ណ (69%)</li>\n  <li><strong>ថេប្លេត</strong> — 29 ប័ណ្ណ (31%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តសរុប 93 ភាគច្រើន (64) ត្រូវបានបញ្ចូលទិន្នន័យតាមទូរស័ព្ទចល័ត ខណៈ 29 ត្រូវបានបញ្ចូលតាមថេប្លេត។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4353,8 +4793,8 @@
       {
         "current": {
           "selected": false,
-          "text": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍",
-          "value": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍"
+          "text": "<div lang=\"km-KH\">\n<p><strong>អ្នកចូលរួមបែងចែកតាមភេទ</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួម តាមភេទ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ប្រុស</strong> — 176 នាក់ (57%)</li>\n  <li><strong>ស្រី</strong> — 134 នាក់ (43%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមអ្នកចូលរួមសរុប 310 នាក់ ភាគច្រើន (176 នាក់) ជាប្រុស ខណៈ 134 នាក់ជាស្រី។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>អ្នកចូលរួមបែងចែកតាមភេទ</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួម តាមភេទ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ប្រុស</strong> — 176 នាក់ (57%)</li>\n  <li><strong>ស្រី</strong> — 134 នាក់ (43%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមអ្នកចូលរួមសរុប 310 នាក់ ភាគច្រើន (176 នាក់) ជាប្រុស ខណៈ 134 នាក់ជាស្រី។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4399,8 +4839,8 @@
       {
         "current": {
           "selected": false,
-          "text": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍",
-          "value": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍"
+          "text": "<div lang=\"km-KH\">\n<p><strong>អ្នកចូលរួមបែងចែកតាមអាយុ</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួម តាមក្រុមអាយុ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>អាយុ 31–45</strong> — 171 នាក់ (55%)</li>\n  <li><strong>អាយុ 15–30</strong> — 89 នាក់ (29%)</li>\n  <li><strong>អាយុ &gt;45</strong> — 50 នាក់ (16%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមអ្នកចូលរួមសរុប 310 នាក់ ជាងពាក់កណ្តាល (171 នាក់) ស្ថិតនៅក្នុងក្រុមអាយុ 31–45 ដែលជាចំណែកធំបំផុតក្នុងចំណោមក្រុមអាយុទាំងអស់។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>អ្នកចូលរួមបែងចែកតាមអាយុ</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួម តាមក្រុមអាយុ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>អាយុ 31–45</strong> — 171 នាក់ (55%)</li>\n  <li><strong>អាយុ 15–30</strong> — 89 នាក់ (29%)</li>\n  <li><strong>អាយុ &gt;45</strong> — 50 នាក់ (16%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមអ្នកចូលរួមសរុប 310 នាក់ ជាងពាក់កណ្តាល (171 នាក់) ស្ថិតនៅក្នុងក្រុមអាយុ 31–45 ដែលជាចំណែកធំបំផុតក្នុងចំណោមក្រុមអាយុទាំងអស់។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4445,8 +4885,8 @@
       {
         "current": {
           "selected": false,
-          "text": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍",
-          "value": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍"
+          "text": "<div lang=\"km-KH\">\n<p><strong>អ្នកចូលរួមបែងចែកតាមក្រុមណៈសម្បត្តិ</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួម តាមភេទ ក្នុងក្រុមនីមួយៗ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ជនជាតិដើម</strong> — ស្រី៖ 38 / សរុប៖ 73</li>\n  <li><strong>យុវជន</strong> — ស្រី៖ 55 / សរុប៖ 34</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ចំពោះក្រុមជនជាតិដើម មានអ្នកចូលរួម 38 នាក់ជាស្រី ក្នុងចំណោមអ្នកចូលរួមសរុប 73 នាក់ក្នុងក្រុមនោះ ដោយសល់ជាប្រុស។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>អ្នកចូលរួមបែងចែកតាមក្រុមណៈសម្បត្តិ</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួម តាមភេទ ក្នុងក្រុមនីមួយៗ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ជនជាតិដើម</strong> — ស្រី៖ 38 / សរុប៖ 73</li>\n  <li><strong>យុវជន</strong> — ស្រី៖ 55 / សរុប៖ 34</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ចំពោះក្រុមជនជាតិដើម មានអ្នកចូលរួម 38 នាក់ជាស្រី ក្នុងចំណោមអ្នកចូលរួមសរុប 73 នាក់ក្នុងក្រុមនោះ ដោយសល់ជាប្រុស។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4491,8 +4931,8 @@
       {
         "current": {
           "selected": false,
-          "text": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍",
-          "value": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍"
+          "text": "<div lang=\"km-KH\">\n<p><strong>លក្ខណៈវិនិច្ឆ័យដែលស្នើឡើងច្រើនជាងគេទាំង៥</strong></p>\n<p>តារាងនេះបង្ហាញលក្ខណៈវិនិច្ឆ័យ/សូចនាករចំនួន ៥ ដែលត្រូវបានស្នើឡើងញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ពេលវេលា</strong> — 16</li>\n  <li><strong>ការបង្រៀន</strong> — 10</li>\n  <li><strong>បណ្ណាល័យ</strong> — 9</li>\n  <li><strong>ប្រជុំប្រចាំខែ</strong> — 8</li>\n  <li><strong>សម្ភារៈកិច្ចា</strong> — 7</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> \"ពេលវេលា\" ត្រូវបានស្នើឡើង 16 ដង ធ្វើឱ្យវាក្លាយជាលក្ខណៈវិនិច្ឆ័យដែលត្រូវបានលើកឡើងញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត — លើសពី \"ការបង្រៀន\" ដែលមាន 10 ដងគួរឲ្យកត់សម្គាល់។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>លក្ខណៈវិនិច្ឆ័យដែលស្នើឡើងច្រើនជាងគេទាំង៥</strong></p>\n<p>តារាងនេះបង្ហាញលក្ខណៈវិនិច្ឆ័យ/សូចនាករចំនួន ៥ ដែលត្រូវបានស្នើឡើងញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ពេលវេលា</strong> — 16</li>\n  <li><strong>ការបង្រៀន</strong> — 10</li>\n  <li><strong>បណ្ណាល័យ</strong> — 9</li>\n  <li><strong>ប្រជុំប្រចាំខែ</strong> — 8</li>\n  <li><strong>សម្ភារៈកិច្ចា</strong> — 7</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> \"ពេលវេលា\" ត្រូវបានស្នើឡើង 16 ដង ធ្វើឱ្យវាក្លាយជាលក្ខណៈវិនិច្ឆ័យដែលត្រូវបានលើកឡើងញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត — លើសពី \"ការបង្រៀន\" ដែលមាន 10 ដងគួរឲ្យកត់សម្គាល់។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4514,8 +4954,8 @@
       {
         "current": {
           "selected": false,
-          "text": "លក្ខណៈវិនិច្ឆ័យអាទិភាព(ដែលបានអនុវត្ត)ច្រើនជាងគេទាំង៥",
-          "value": "លក្ខណៈវិនិច្ឆ័យអាទិភាព(ដែលបានអនុវត្ត)ច្រើនជាងគេទាំង៥"
+          "text": "លក្ខណៈវិនិច្ឆ័យអាទិភាពច្រើនជាងគេទាំង៥",
+          "value": "លក្ខណៈវិនិច្ឆ័យអាទិភាពច្រើនជាងគេទាំង៥"
         },
         "datasource": {
           "type": "postgres",
@@ -4537,8 +4977,8 @@
       {
         "current": {
           "selected": false,
-          "text": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍",
-          "value": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍"
+          "text": "<div lang=\"km-KH\">\n<p><strong>លក្ខណៈវិនិច្ឆ័យអាទិភាព ច្រើនជាងគេទាំង៥</strong></p>\n<p>តារាងនេះបង្ហាញលក្ខណៈវិនិច្ឆ័យ/សូចនាករអាទិភាពចំនួន ៥ ដែលត្រូវបានអនុម័តញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ការបង្រៀន</strong> — 5</li>\n  <li><strong>ពេលវេលា</strong> — 5</li>\n  <li><strong>ធុងទឹកអនាម័យ</strong> — 4</li>\n  <li><strong>បណ្ណាល័យ</strong> — 4</li>\n  <li><strong>កន្លែងចាក់សំរាម</strong> — 3</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> \"ការបង្រៀន\" និង \"ពេលវេលា\" មានចំនួនស្មើគ្នាជាលក្ខណៈវិនិច្ឆ័យអាទិភាពដែលបានអនុម័តញឹកញាប់បំផុត ដោយលេចឡើងម្តងៗ ៥ ដងក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>លក្ខណៈវិនិច្ឆ័យអាទិភាព ច្រើនជាងគេទាំង៥</strong></p>\n<p>តារាងនេះបង្ហាញលក្ខណៈវិនិច្ឆ័យ/សូចនាករអាទិភាពចំនួន ៥ ដែលត្រូវបានអនុម័តញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ការបង្រៀន</strong> — 5</li>\n  <li><strong>ពេលវេលា</strong> — 5</li>\n  <li><strong>ធុងទឹកអនាម័យ</strong> — 4</li>\n  <li><strong>បណ្ណាល័យ</strong> — 4</li>\n  <li><strong>កន្លែងចាក់សំរាម</strong> — 3</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> \"ការបង្រៀន\" និង \"ពេលវេលា\" មានចំនួនស្មើគ្នាជាលក្ខណៈវិនិច្ឆ័យអាទិភាពដែលបានអនុម័តញឹកញាប់បំផុត ដោយលេចឡើងម្តងៗ ៥ ដងក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4583,8 +5023,8 @@
       {
         "current": {
           "selected": false,
-          "text": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍",
-          "value": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍"
+          "text": "<div lang=\"km-KH\">\n<p><strong>លក្ខណៈវិនិច្ឆ័យអាទិភាពទាំង៥ (😄 ពេញចិត្ត)</strong></p>\n<p>តារាងនេះបង្ហាញលក្ខណៈវិនិច្ឆ័យ/សូចនាករអាទិភាពចំនួន ៥ ដែលត្រូវបានគូសសម្គាល់ជាការ \"ពេញចិត្ត(ពិន្ទុ 4 និង 5)\" (😄) ញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុ។</p>\n<ul>\n  <li><strong>ពេលវេលា</strong> — 24</li>\n  <li><strong>ប្រជុំប្រចាំខែ</strong> — 17</li>\n  <li><strong>ការផ្តល់សេវា</strong> — 11</li>\n  <li><strong>ការបង្រៀន</strong> — 10</li>\n  <li><strong>វេនប្រចាំការ</strong> — 10</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> \"ពេលវេលា\" ទទួលបានពិន្ទុពេញចិត្តច្រើនជាងគេ (24) ជាងទ្វេដងនៃចំណុចបន្ទាប់គឺ \"ប្រជុំប្រចាំខែ\" (17)។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>លក្ខណៈវិនិច្ឆ័យអាទិភាពទាំង៥ (😄 ពេញចិត្ត)</strong></p>\n<p>តារាងនេះបង្ហាញលក្ខណៈវិនិច្ឆ័យ/សូចនាករអាទិភាពចំនួន ៥ ដែលត្រូវបានគូសសម្គាល់ជាការ \"ពេញចិត្ត(ពិន្ទុ 4 និង 5)\" (😄) ញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុ។</p>\n<ul>\n  <li><strong>ពេលវេលា</strong> — 24</li>\n  <li><strong>ប្រជុំប្រចាំខែ</strong> — 17</li>\n  <li><strong>ការផ្តល់សេវា</strong> — 11</li>\n  <li><strong>ការបង្រៀន</strong> — 10</li>\n  <li><strong>វេនប្រចាំការ</strong> — 10</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> \"ពេលវេលា\" ទទួលបានពិន្ទុពេញចិត្តច្រើនជាងគេ (24) ជាងទ្វេដងនៃចំណុចបន្ទាប់គឺ \"ប្រជុំប្រចាំខែ\" (17)។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4629,8 +5069,8 @@
       {
         "current": {
           "selected": false,
-          "text": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍",
-          "value": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍"
+          "text": "<div lang=\"km-KH\">\n<p><strong>សូចនាករអាទិភាពទាំង៥ (🙂 អាចទទួលយកបាន)</strong></p>\n<p>តារាងនេះបង្ហាញសូចនាករអាទិភាពចំនួន ៥ ដែលត្រូវបានគូសសម្គាល់ជា \"អាចទទួលយកបាន(ពិន្ទុ 3)\" (🙂) ញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុ។</p>\n<ul>\n  <li><strong>បង្គន់អនាម័យ</strong> — 14</li>\n  <li><strong>ការបង្រៀន</strong> — 13</li>\n  <li><strong>របិដ្ឋាន</strong> — 12</li>\n  <li><strong>អាកាសធាតុ</strong> — 11</li>\n  <li><strong>ថ្នាំបង្គារ</strong> — 10</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> \"បង្គន់អនាម័យ\" ទទួលបានពិន្ទុ \"អាចទទួលយកបាន\" ច្រើនជាងគេ (14) លើសពី \"ការបង្រៀន\" (13) បន្តិច។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>សូចនាករអាទិភាពទាំង៥ (🙂 អាចទទួលយកបាន)</strong></p>\n<p>តារាងនេះបង្ហាញសូចនាករអាទិភាពចំនួន ៥ ដែលត្រូវបានគូសសម្គាល់ជា \"អាចទទួលយកបាន(ពិន្ទុ 3)\" (🙂) ញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុ។</p>\n<ul>\n  <li><strong>បង្គន់អនាម័យ</strong> — 14</li>\n  <li><strong>ការបង្រៀន</strong> — 13</li>\n  <li><strong>របិដ្ឋាន</strong> — 12</li>\n  <li><strong>អាកាសធាតុ</strong> — 11</li>\n  <li><strong>ថ្នាំបង្គារ</strong> — 10</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> \"បង្គន់អនាម័យ\" ទទួលបានពិន្ទុ \"អាចទទួលយកបាន\" ច្រើនជាងគេ (14) លើសពី \"ការបង្រៀន\" (13) បន្តិច។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4675,8 +5115,8 @@
       {
         "current": {
           "selected": false,
-          "text": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍",
-          "value": "របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុវត្តរួចរាល់នៅសហគមន៍"
+          "text": "<div lang=\"km-KH\">\n<p><strong>សូចនាករអាទិភាពទាំង៥ (😡 មិនពេញចិត្ត)</strong></p>\n<p>តារាងនេះបង្ហាញសូចនាករអាទិភាពចំនួន ៥ ដែលត្រូវបានគូសសម្គាល់ជា \"មិនពេញចិត្ត(ពិន្ទុ 1 និង 2)\" (😡) ញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុ។</p>\n<ul>\n  <li><strong>ការចូលរួមរបស់មាតាបិតាសិស្សរំលឹកកូន</strong> — 17</li>\n  <li><strong>បណ្ណាល័យ</strong> — 14</li>\n  <li><strong>សិស្សអវត្តមានច្រើន</strong> — 14</li>\n  <li><strong>សិស្សបោះបង់ការសិក្សា</strong> — 11</li>\n  <li><strong>ទំនាក់ទំនងលម្អៀងគ្រូនិងសហគមន៍</strong> — 9</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> \"ការចូលរួមរបស់មាតាបិតាសិស្សរំលឹកកូន\" ទទួលបានពិន្ទុ \"មិនពេញចិត្ត\" ច្រើនជាងគេ (17) ដែលបង្ហាញថានេះជាបញ្ហាចម្បងបំផុតក្នុងចំណោមសូចនាករដែលបានវាយតម្លៃ។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>សូចនាករអាទិភាពទាំង៥ (😡 មិនពេញចិត្ត)</strong></p>\n<p>តារាងនេះបង្ហាញសូចនាករអាទិភាពចំនួន ៥ ដែលត្រូវបានគូសសម្គាល់ជា \"មិនពេញចិត្ត(ពិន្ទុ 1 និង 2)\" (😡) ញឹកញាប់បំផុត ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុ។</p>\n<ul>\n  <li><strong>ការចូលរួមរបស់មាតាបិតាសិស្សរំលឹកកូន</strong> — 17</li>\n  <li><strong>បណ្ណាល័យ</strong> — 14</li>\n  <li><strong>សិស្សអវត្តមានច្រើន</strong> — 14</li>\n  <li><strong>សិស្សបោះបង់ការសិក្សា</strong> — 11</li>\n  <li><strong>ទំនាក់ទំនងលម្អៀងគ្រូនិងសហគមន៍</strong> — 9</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> \"ការចូលរួមរបស់មាតាបិតាសិស្សរំលឹកកូន\" ទទួលបានពិន្ទុ \"មិនពេញចិត្ត\" ច្រើនជាងគេ (17) ដែលបង្ហាញថានេះជាបញ្ហាចម្បងបំផុតក្នុងចំណោមសូចនាករដែលបានវាយតម្លៃ។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -4689,6 +5129,144 @@
         "name": "scorecard_top_5_prioritized_criteria_angry_face_panel_description",
         "options": [],
         "query": "SELECT label\nFROM translations\nWHERE key = 'scorecard_top_5_prioritized_criteria_angry_face_panel_description'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "អត្រាបញ្ចប់ប័ណ្ណដាក់ពិន្ទុ(%)",
+          "value": "អត្រាបញ្ចប់ប័ណ្ណដាក់ពិន្ទុ(%)"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'scorecard_completion_rate_panel_title'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "scorecard_completion_rate_panel_title",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'scorecard_completion_rate_panel_title'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "<div lang=\"km-KH\">\n<p><strong>អត្រាបញ្ចប់ប័ណ្ណដាក់ពិន្ទុ (%)</strong></p>\n<p>សូចនាករនេះបង្ហាញភាគរយនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត ធៀបនឹងប័ណ្ណដាក់ពិន្ទុដែលបានគ្រោងទុក។</p>\n<p><strong>រូបមន្ត (Formula):</strong><br>\nអត្រាបញ្ចប់ (%) = (ប័ណ្ណដាក់ពិន្ទុដែលបានបញ្ចប់/អនុម័ត ÷ ប័ណ្ណដាក់ពិន្ទុដែលបានគម្រោង) × 100</p>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើមានប័ណ្ណដាក់ពិន្ទុគម្រោង ៥៥ និងបានអនុម័ត ៤៥ នោះអត្រាបញ្ចប់គឺ៖<br>\n(៤៥ ÷ ៥៥) × 100 = 82%</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>អត្រាបញ្ចប់ប័ណ្ណដាក់ពិន្ទុ (%)</strong></p>\n<p>សូចនាករនេះបង្ហាញភាគរយនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត ធៀបនឹងប័ណ្ណដាក់ពិន្ទុដែលបានគ្រោងទុក។</p>\n<p><strong>រូបមន្ត (Formula):</strong><br>\nអត្រាបញ្ចប់ (%) = (ប័ណ្ណដាក់ពិន្ទុដែលបានបញ្ចប់/អនុម័ត ÷ ប័ណ្ណដាក់ពិន្ទុដែលបានគម្រោង) × 100</p>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើមានប័ណ្ណដាក់ពិន្ទុគម្រោង ៥៥ និងបានអនុម័ត ៤៥ នោះអត្រាបញ្ចប់គឺ៖<br>\n(៤៥ ÷ ៥៥) × 100 = 82%</p>\n</div>"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'scorecard_completion_rate_panel_description'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "scorecard_completion_rate_panel_description",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'scorecard_completion_rate_panel_description'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "អត្រាគ្របដណ្តប់ភូមិសាស្ត្រ (%)",
+          "value": "អត្រាគ្របដណ្តប់ភូមិសាស្ត្រ (%)"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'scorecard_geo_coverage_rate_panel_title'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "scorecard_geo_coverage_rate_panel_title",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'scorecard_geo_coverage_rate_panel_title'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "<div lang=\"km-KH\">\n<p><strong>អត្រាគ្របដណ្តប់ភូមិសាស្ត្រ (%)</strong></p>\n<p>សូចនាករនេះបង្ហាញពីភាគរយនៃចំនួនភូមិសាស្ត្រដែលបានសម្រេច ប្រៀបធៀបនឹងចំនួនភូមិសាស្ត្រដែលបានគ្រោងទុក។</p>\n\n<p><strong>រូបមន្ត (Formula):</strong><br>\nអត្រាគ្របដណ្តប់ភូមិសាស្ត្រ (%) = (ចំនួនភូមិសាស្ត្រដែលបានសម្រេច ÷ ចំនួនភូមិសាស្ត្រដែលបានគ្រោងទុក) × 100</p>\n\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើចំនួនភូមិសាស្ត្រដែលបានគ្រោងទុកមាន ១០ តំបន់ ហើយបានសម្រេច ៨ តំបន់ នោះអត្រាគ្របដណ្តប់ភូមិសាស្ត្រគឺ៖<br>\n(៨ ÷ ១០) × 100 = 80%</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>អត្រាគ្របដណ្តប់ភូមិសាស្ត្រ (%)</strong></p>\n<p>សូចនាករនេះបង្ហាញពីភាគរយនៃចំនួនភូមិសាស្ត្រដែលបានសម្រេច ប្រៀបធៀបនឹងចំនួនភូមិសាស្ត្រដែលបានគ្រោងទុក។</p>\n\n<p><strong>រូបមន្ត (Formula):</strong><br>\nអត្រាគ្របដណ្តប់ភូមិសាស្ត្រ (%) = (ចំនួនភូមិសាស្ត្រដែលបានសម្រេច ÷ ចំនួនភូមិសាស្ត្រដែលបានគ្រោងទុក) × 100</p>\n\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើចំនួនភូមិសាស្ត្រដែលបានគ្រោងទុកមាន ១០ តំបន់ ហើយបានសម្រេច ៨ តំបន់ នោះអត្រាគ្របដណ្តប់ភូមិសាស្ត្រគឺ៖<br>\n(៨ ÷ ១០) × 100 = 80%</p>\n</div>"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'scorecard_geo_coverage_rate_panel_description'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "scorecard_geo_coverage_rate_panel_description",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'scorecard_geo_coverage_rate_panel_description'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "វិសាលភាពអ្នកទទួលផល",
+          "value": "វិសាលភាពអ្នកទទួលផល"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'scorecard_beneficiary_reach_title'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "scorecard_beneficiary_reach_title",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'scorecard_beneficiary_reach_title'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "<div lang=\"km-KH\">\n<p><strong>វិសាលភាពអ្នកទទួលផល</strong></p>\n<p>តារាងនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួមសរុប — ជួរឈរនីមួយៗបង្ហាញចំនួន និងភាគរយប្រៀបធៀបនឹងចំនួនសរុប។</p>\n<ul>\n  <li><strong>ចំនួនអ្នកចូលរួមសរុប</strong> — 7</li>\n  <li><strong>ស្រី %</strong> — 6 (86%)</li>\n  <li><strong>យុវជន %</strong> — 4 (57%)</li>\n  <li><strong>ពិការភាព %</strong> — 0 (0%)</li>\n  <li><strong>ជនជាតិដើម %</strong> — 3 (43%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមអ្នកចូលរួមសរុប 7 នាក់ មាន 6 នាក់ជាស្រី (86%) 4 នាក់ជាយុវជន (57%) និង 3 នាក់ជាជនជាតិដើម (43%)។ គ្មានអ្នកចូលរួមណាមួយរាយការណ៍ថាមានពិការភាពទេ។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>វិសាលភាពអ្នកទទួលផល</strong></p>\n<p>តារាងនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួមសរុប — ជួរឈរនីមួយៗបង្ហាញចំនួន និងភាគរយប្រៀបធៀបនឹងចំនួនសរុប។</p>\n<ul>\n  <li><strong>ចំនួនអ្នកចូលរួមសរុប</strong> — 7</li>\n  <li><strong>ស្រី %</strong> — 6 (86%)</li>\n  <li><strong>យុវជន %</strong> — 4 (57%)</li>\n  <li><strong>ពិការភាព %</strong> — 0 (0%)</li>\n  <li><strong>ជនជាតិដើម %</strong> — 3 (43%)</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមអ្នកចូលរួមសរុប 7 នាក់ មាន 6 នាក់ជាស្រី (86%) 4 នាក់ជាយុវជន (57%) និង 3 នាក់ជាជនជាតិដើម (43%)។ គ្មានអ្នកចូលរួមណាមួយរាយការណ៍ថាមានពិការភាពទេ។</p>\n</div>"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'scorecard_beneficiary_reach_description'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "scorecard_beneficiary_reach_description",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'scorecard_beneficiary_reach_description'\n  AND locale = '$locale'",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -4790,8 +5368,8 @@
       {
         "current": {
           "selected": false,
-          "text": "ចំនួនអនុវត្តរួចរាល់",
-          "value": "ចំនួនអនុវត្តរួចរាល់"
+          "text": "ចំនួនអនុម័ត",
+          "value": "ចំនួនអនុម័ត"
         },
         "datasource": {
           "type": "postgres",
@@ -4850,6 +5428,29 @@
         "name": "scorecard_type_community_scorecard",
         "options": [],
         "query": "SELECT label\nFROM translations\nWHERE key = 'scorecard_type_community_scorecard'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ប័ណ្ណដាក់ពិន្ទុរួម(វាយតម្លៃខ្លួនឯង + សហគមន៍)",
+          "value": "ប័ណ្ណដាក់ពិន្ទុរួម(វាយតម្លៃខ្លួនឯង + សហគមន៍)"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'scorecard_type_combined_scorecard'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "scorecard_type_combined_scorecard",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'scorecard_type_combined_scorecard'\n  AND locale = '$locale'",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -4996,9 +5597,10 @@
       },
       {
         "current": {
+          "isNone": true,
           "selected": false,
-          "text": "ប័ណ្ណក្រីក្រ",
-          "value": "ប័ណ្ណក្រីក្រ"
+          "text": "None",
+          "value": ""
         },
         "datasource": {
           "type": "postgres",
@@ -5250,8 +5852,8 @@
       {
         "current": {
           "selected": false,
-          "text": "អនុវត្តរួចរាល់",
-          "value": "អនុវត្តរួចរាល់"
+          "text": "អនុម័ត",
+          "value": "អនុម័ត"
         },
         "datasource": {
           "type": "postgres",
@@ -5264,6 +5866,282 @@
         "name": "scorecard_implementation_status_implemented",
         "options": [],
         "query": "SELECT label\nFROM translations\nWHERE key = 'scorecard_implementation_status_implemented'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "គោលដៅភូមិសាស្ត្រ",
+          "value": "គោលដៅភូមិសាស្ត្រ"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'location'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "location",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'location'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "# គ្របដណ្តប់ / # គោលដៅ",
+          "value": "# គ្របដណ្តប់ / # គោលដៅ"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'covered_vs_target'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "covered_vs_target",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'covered_vs_target'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "អត្រាគ្របដណ្តប់ (%)",
+          "value": "អត្រាគ្របដណ្តប់ (%)"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'coverage_rate'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "coverage_rate",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'coverage_rate'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ខេត្ត",
+          "value": "ខេត្ត"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'province_covered'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "province_covered",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'province_covered'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ស្រុក",
+          "value": "ស្រុក"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'district_covered'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "district_covered",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'district_covered'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ឃុំ",
+          "value": "ឃុំ"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'commune_covered'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "commune_covered",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'commune_covered'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "វិសាលភាពអ្នកទទួលផល",
+          "value": "វិសាលភាពអ្នកទទួលផល"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'beneficiary_reach'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "beneficiary_reach",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'beneficiary_reach'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ចំនួនអ្នកចូលរួមសរុប",
+          "value": "ចំនួនអ្នកចូលរួមសរុប"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'total_participants'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "total_participants",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'total_participants'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ស្រី %",
+          "value": "ស្រី %"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'female_percentage'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "female_percentage",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'female_percentage'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "យុវជន %",
+          "value": "យុវជន %"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'youth_percentage'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "youth_percentage",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'youth_percentage'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ពិការភាព %",
+          "value": "ពិការភាព %"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'disabilities_percentage'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "disabilities_percentage",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'disabilities_percentage'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ជនជាតិដើម %",
+          "value": "ជនជាតិដើម %"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'minority_percentage'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "minority_percentage",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'minority_percentage'\n  AND locale = '$locale'",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -5306,6 +6184,6 @@
   "timezone": "browser",
   "title": "Scorecard Dashboard",
   "uid": "hqZGKcnnk",
-  "version": 7,
+  "version": 39,
   "weekStart": ""
 }
