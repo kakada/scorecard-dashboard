@@ -752,18 +752,29 @@
       "type": "stat"
     },
     {
-      "description": "$scorecard_participants_panel_description",
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
+      "description": "$data_quality_kpi_panel_description",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "green",
                 "value": null
               },
               {
@@ -777,37 +788,36 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 11,
+        "w": 12,
         "x": 0,
         "y": 14
       },
-      "id": 39,
+      "id": 48,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
           ],
-          "fields": "/.*/",
-          "values": false
+          "show": false
         },
-        "text": {
-          "valueSize": 60
-        },
-        "textMode": "auto"
+        "showHeader": true
       },
       "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PCC52D03280B7034C"
+          },
           "editorMode": "code",
           "format": "table",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n),\n_conducted_scorecards AS (\n  SELECT s.* \n  FROM _scorecards s \n  WHERE s.dataset_id2 in ($dataset_id)\n),\n_formated_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards s\n),\n_planned_scorecards AS (\n  SELECT\n    s.*\n  FROM _formated_scorecards AS s\n  WHERE\n    s.program_id in (${program_id})\n    AND $__timeFilter(s.created_at)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.dataset_id2 in ($dataset_id)\n),\n_total_lngo AS (\n  SELECT count(DISTINCT local_ngo_id) \n  FROM _planned_scorecards\n),\n_total_caf AS (\n  SELECT count(*) from cafs\n  WHERE local_ngo_id IN ( SELECT DISTINCT(local_ngo_id) FROM _planned_scorecards )\n),\n_total_participant AS (\n  SELECT count(*) from participants\n  WHERE scorecard_uuid::integer IN ( SELECT id FROM _conducted_scorecards )\n),\n_avg_participant AS (\n  SELECT COALESCE((SELECT * FROM _total_participant) / NULLIF((SELECT count(*) FROM _conducted_scorecards), 0), 0) AS avg_participant\n)\n\nSELECT \n  concat_ws (\n    ' / ',\n    (select * from _total_lngo),\n    (select * from _total_caf),\n    (select * from _total_participant),\n    (select * from _avg_participant)\n  );",
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws(\n      '',\n      (CASE WHEN s.dataset_id IS NULL THEN '' END),\n      (CASE WHEN s.dataset_id IS NOT NULL THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards AS s\n  WHERE \n    s.program_id IN (${program_id})\n    AND $__timeFilter(s.created_at)\n    AND s.scorecard_type IN ($scorecard_type)\n    AND s.year IN ($year)\n    AND s.facility_id IN ($facility_id)\n    AND s.province_id IN ($province_id)\n    AND s.local_ngo_id IN ($local_ngo_id)\n    AND s.deleted_at IS NULL\n),\n\n_filtered_scorecards AS (\n  SELECT s.*\n  FROM _scorecards s\n  WHERE s.dataset_id2 IN ($dataset_id)\n),\n\n_total_submitted AS (\n  SELECT count(*) AS total_submitted\n  FROM _filtered_scorecards\n  WHERE submitted_at IS NOT NULL\n),\n\n_total_approved AS (\n  SELECT count(*) AS total_approved\n  FROM _filtered_scorecards\n  WHERE completed_at IS NOT NULL\n),\n\n_total_custom_indicator_correction AS (\n  SELECT count(*) AS total_custom_indicator_correction\n  FROM raised_indicators AS ri\n  INNER JOIN indicators AS i ON ri.indicator_uuid = i.uuid\n  INNER JOIN _filtered_scorecards AS s ON ri.scorecard_uuid = s.id::varchar(20)\n  WHERE \n    i.type = 'Indicators::CustomIndicator'\n    AND ri.updated_at > ri.created_at\n)\n\nSELECT\n  (SELECT total_submitted FROM _total_submitted) AS \"$total_submitted_scorecard\",\n  (SELECT total_approved FROM _total_approved) AS \"$total_approved_scorecard\",\n  (SELECT total_custom_indicator_correction FROM _total_custom_indicator_correction) AS \"$total_custom_indicator_correction\"",
           "refId": "A",
           "select": [
             [
@@ -848,8 +858,8 @@
           ]
         }
       ],
-      "title": "$scorecard_participants_panel_title",
-      "type": "stat"
+      "title": "$data_quality_kpi_panel_title",
+      "type": "table"
     },
     {
       "datasource": {
@@ -888,8 +898,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 13,
-        "x": 11,
+        "w": 12,
+        "x": 12,
         "y": 14
       },
       "id": 47,
@@ -966,6 +976,324 @@
         "type": "postgres",
         "uid": "PCC52D03280B7034C"
       },
+      "description": "$fam_reporting_view_by_device_description",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "id": 49,
+      "options": {
+        "displayLabels": [
+          "value",
+          "percent",
+          "name"
+        ],
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PCC52D03280B7034C"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  v.device_type,\n  COUNT(*) AS views\nFROM ahoy_events e\nJOIN ahoy_visits v ON v.id = e.visit_id\nWHERE e.name = 'view_fam_reporting'\nGROUP BY v.device_type;",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "latitude"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "table": "locations",
+          "timeColumn": "created_at",
+          "timeColumnType": "timestamp",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "$fam_reporting_view_by_device_title",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
+      "description": "$fam_reporting_view_by_detail_description",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "id": 50,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "PCC52D03280B7034C"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  v.device_type as \"$device_type\",\n  v.os as \"$os\",\n  v.browser as \"$browser\",\n  COUNT(*) AS \"$views\"\nFROM ahoy_events e\nJOIN ahoy_visits v ON v.id = e.visit_id\nWHERE e.name = 'view_fam_reporting'\nGROUP BY 1, 2, 3\nORDER BY 4 DESC;",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "latitude"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "table": "locations",
+          "timeColumn": "created_at",
+          "timeColumnType": "timestamp",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "$fam_reporting_view_by_detail_title",
+      "type": "table"
+    },
+    {
+      "description": "$scorecard_participants_panel_description",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "id": 39,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "text": {
+          "valueSize": 60
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "WITH _scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      ', ',\n      (CASE WHEN s.number_of_disability > 0 THEN 'Disability' END),\n      (CASE WHEN s.number_of_ethnic_minority > 0 THEN 'Minority' END),\n      (CASE WHEN s.number_of_youth > 0 THEN 'Youth' END),\n      (CASE WHEN s.number_of_id_poor > 0 THEN 'ID Poor' END),\n      (CASE WHEN (s.number_of_disability = 0 AND s.number_of_ethnic_minority = 0 AND s.number_of_youth = 0 AND s.number_of_id_poor = 0) THEN 'N/A' END)\n    ) as profile,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards as s\n  INNER JOIN participants as p on s.id::varchar(20) = p.scorecard_uuid\n  WHERE \n    s.program_id in (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.completed_at is not null\n    AND p.age BETWEEN ${age:raw}\n    AND p.gender in ($gender)\n  GROUP BY s.id\n),\n_conducted_scorecards AS (\n  SELECT s.* \n  FROM _scorecards s \n  WHERE s.dataset_id2 in ($dataset_id)\n),\n_formated_scorecards AS (\n  SELECT \n    s.*,\n    concat_ws (\n      '',\n      (CASE WHEN s.dataset_id is null THEN '' END),\n      (CASE WHEN s.dataset_id is not null THEN s.dataset_id END)\n    ) AS dataset_id2\n  FROM scorecards s\n),\n_planned_scorecards AS (\n  SELECT\n    s.*\n  FROM _formated_scorecards AS s\n  WHERE\n    s.program_id in (${program_id})\n    AND $__timeFilter(s.created_at)\n    AND s.scorecard_type in ($scorecard_type) \n    AND s.year in ($year) \n    AND s.facility_id in ($facility_id)\n    AND s.province_id in ($province_id)\n    AND s.local_ngo_id in ($local_ngo_id)\n    AND s.deleted_at is null\n    AND s.dataset_id2 in ($dataset_id)\n),\n_total_lngo AS (\n  SELECT count(DISTINCT local_ngo_id) \n  FROM _planned_scorecards\n),\n_total_caf AS (\n  SELECT count(*) from cafs\n  WHERE local_ngo_id IN ( SELECT DISTINCT(local_ngo_id) FROM _planned_scorecards )\n),\n_total_participant AS (\n  SELECT count(*) from participants\n  WHERE scorecard_uuid::integer IN ( SELECT id FROM _conducted_scorecards )\n),\n_avg_participant AS (\n  SELECT COALESCE((SELECT * FROM _total_participant) / NULLIF((SELECT count(*) FROM _conducted_scorecards), 0), 0) AS avg_participant\n)\n\nSELECT \n  concat_ws (\n    ' / ',\n    (select * from _total_lngo),\n    (select * from _total_caf),\n    (select * from _total_participant),\n    (select * from _avg_participant)\n  );",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "latitude"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "table": "locations",
+          "timeColumn": "created_at",
+          "timeColumnType": "timestamp",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "$scorecard_participants_panel_title",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "PCC52D03280B7034C"
+      },
       "description": "$scorecard_total_indicators_panel_description",
       "fieldConfig": {
         "defaults": {
@@ -977,8 +1305,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "orange",
-                "value": null
+                "color": "orange"
               },
               {
                 "color": "red",
@@ -993,7 +1320,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 30
       },
       "id": 40,
       "options": {
@@ -1085,8 +1412,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "orange",
-                "value": null
+                "color": "orange"
               },
               {
                 "color": "red",
@@ -1101,7 +1427,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 30
       },
       "id": 41,
       "options": {
@@ -1214,8 +1540,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1351,7 +1676,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 23
+        "y": 34
       },
       "id": 32,
       "options": {
@@ -1470,8 +1795,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1607,7 +1931,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 23
+        "y": 34
       },
       "id": 9,
       "options": {
@@ -1791,7 +2115,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 31
+        "y": 42
       },
       "id": 42,
       "options": {
@@ -2020,7 +2344,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 31
+        "y": 42
       },
       "id": 23,
       "options": {
@@ -2159,7 +2483,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 31
+        "y": 42
       },
       "id": 38,
       "options": {
@@ -2329,7 +2653,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 39
+        "y": 50
       },
       "id": 5,
       "options": {
@@ -2529,7 +2853,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 39
+        "y": 50
       },
       "id": 35,
       "options": {
@@ -2649,8 +2973,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2816,7 +3139,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 39
+        "y": 50
       },
       "id": 36,
       "options": {
@@ -2933,8 +3256,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2980,7 +3302,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 47
+        "y": 58
       },
       "id": 33,
       "options": {
@@ -3100,8 +3422,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3132,7 +3453,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 47
+        "y": 58
       },
       "id": 44,
       "options": {
@@ -3252,8 +3573,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3299,7 +3619,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 55
+        "y": 66
       },
       "id": 27,
       "options": {
@@ -3419,8 +3739,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3466,7 +3785,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 55
+        "y": 66
       },
       "id": 28,
       "options": {
@@ -3586,8 +3905,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3633,7 +3951,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 55
+        "y": 66
       },
       "id": 29,
       "options": {
@@ -3721,7 +4039,7 @@
         "h": 16,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 74
       },
       "id": 11,
       "options": {
@@ -3776,7 +4094,7 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -3888,7 +4206,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": [
             "All"
           ],
@@ -4189,7 +4507,7 @@
       },
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "ខ្មែរ",
           "value": "km"
         },
@@ -4885,8 +5203,8 @@
       {
         "current": {
           "selected": false,
-          "text": "<div lang=\"km-KH\">\n<p><strong>អ្នកចូលរួមបែងចែកតាមក្រុមណៈសម្បត្តិ</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួម តាមភេទ ក្នុងក្រុមនីមួយៗ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ជនជាតិដើម</strong> — ស្រី៖ 38 / សរុប៖ 73</li>\n  <li><strong>យុវជន</strong> — ស្រី៖ 55 / សរុប៖ 34</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ចំពោះក្រុមជនជាតិដើម មានអ្នកចូលរួម 38 នាក់ជាស្រី ក្នុងចំណោមអ្នកចូលរួមសរុប 73 នាក់ក្នុងក្រុមនោះ ដោយសល់ជាប្រុស។</p>\n</div>",
-          "value": "<div lang=\"km-KH\">\n<p><strong>អ្នកចូលរួមបែងចែកតាមក្រុមណៈសម្បត្តិ</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួម តាមភេទ ក្នុងក្រុមនីមួយៗ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ជនជាតិដើម</strong> — ស្រី៖ 38 / សរុប៖ 73</li>\n  <li><strong>យុវជន</strong> — ស្រី៖ 55 / សរុប៖ 34</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ចំពោះក្រុមជនជាតិដើម មានអ្នកចូលរួម 38 នាក់ជាស្រី ក្នុងចំណោមអ្នកចូលរួមសរុប 73 នាក់ក្នុងក្រុមនោះ ដោយសល់ជាប្រុស។</p>\n</div>"
+          "text": "<div lang=\"km-KH\">\n<p><strong>អ្នកចូលរួមបែងចែកតាមក្រុមណៈសម្បត្តិ</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួម តាមភេទ ក្នុងក្រុមនីមួយៗ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ជនជាតិដើម</strong> — ស្រី៖ 38 / សរុប៖ 73</li>\n  <li><strong>យុវជន</strong> — ស្រី៖ 34 / សរុប៖ 55</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ចំពោះក្រុមជនជាតិដើម មានអ្នកចូលរួម 38 នាក់ជាស្រី ក្នុងចំណោមអ្នកចូលរួមសរុប 73 នាក់ក្នុងក្រុមនោះ ដោយសល់ជាប្រុស។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>អ្នកចូលរួមបែងចែកតាមក្រុមណៈសម្បត្តិ</strong></p>\n<p>ក្រាបនេះបង្ហាញការបែងចែកនៃអ្នកចូលរួម តាមភេទ ក្នុងក្រុមនីមួយៗ។ <em>របាយការណ៍នេះរាប់បញ្ចូលតែប័ណ្ណដាក់ពិន្ទុទាំងឡាយណាដែលបានអនុម័ត។</em></p>\n<ul>\n  <li><strong>ជនជាតិដើម</strong> — ស្រី៖ 38 / សរុប៖ 73</li>\n  <li><strong>យុវជន</strong> — ស្រី៖ 34 / សរុប៖ 55</li>\n</ul>\n<p><strong>ឧទាហរណ៍៖</strong> ចំពោះក្រុមជនជាតិដើម មានអ្នកចូលរួម 38 នាក់ជាស្រី ក្នុងចំណោមអ្នកចូលរួមសរុប 73 នាក់ក្នុងក្រុមនោះ ដោយសល់ជាប្រុស។</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
@@ -5276,6 +5594,144 @@
       {
         "current": {
           "selected": false,
+          "text": "គុណភាពទិន្នន័យ KPI",
+          "value": "គុណភាពទិន្នន័យ KPI"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'data_quality_kpi_panel_title'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "data_quality_kpi_panel_title",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'data_quality_kpi_panel_title'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "<div lang=\"km-KH\">\n<p><strong>KPI គុណភាពទិន្នន័យ</strong></p>\n<p>តារាងនេះតាមដានសូចនាករសំខាន់ៗនៃគុណភាពទិន្នន័យប័ណ្ណដាក់ពិន្ទុ</p>\n<ul>\n  <li><strong>ចំនួនប័ណ្ណបានដាក់ស្នើ</strong> — ប័ណ្ណដាក់ពិន្ទុដែលបានដាក់ស្នើដោយ CAFs/Peers</li>\n  <li><strong>ចំនួនប័ណ្ណបានអនុម័ត</strong> — ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តដោយ Local NGO (មិនរាប់បញ្ចូលប័ណ្ណដែលបានបដិសេធ)</li>\n  <li><strong>ចំនួនប័ណ្ណបានបដិសេធ</strong> — ប័ណ្ណដាក់ពិន្ទុដែលបានបដិសេធដោយ Program team</li>\n  <li><strong># កែសម្រួលសូចនាករថ្មី</strong> — indicator ប្រភេទ custom ដែលត្រូវបានកែប្រែដោយ Local NGO (ពោលគឺបានធ្វើបច្ចុប្បន្នភាពក្រោយពេលបានបង្កើតដំបូង)</li>\n</ul>\n<p><strong>តម្លៃបច្ចុប្បន្ន៖</strong> ដាក់ស្នើ 5 / អនុម័ត 3 / បដិសេធ 1 / ការកែតម្រូវ Indicator ថ្មី 0។</p>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានដាក់ស្នើ 5 មាន 3 ត្រូវបានអនុម័ត និង 1 ត្រូវបានបដិសេធ ខណៈមាន 1 នៅសល់កំពុងរង់ចាំការត្រួតពិនិត្យ។ គ្មាន indicator ថ្មីណាមួយត្រូវការកែតម្រូវដោយ Local NGO ទេ។</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<p><strong>KPI គុណភាពទិន្នន័យ</strong></p>\n<p>តារាងនេះតាមដានសូចនាករសំខាន់ៗនៃគុណភាពទិន្នន័យប័ណ្ណដាក់ពិន្ទុ</p>\n<ul>\n  <li><strong>ចំនួនប័ណ្ណបានដាក់ស្នើ</strong> — ប័ណ្ណដាក់ពិន្ទុដែលបានដាក់ស្នើដោយ CAFs/Peers</li>\n  <li><strong>ចំនួនប័ណ្ណបានអនុម័ត</strong> — ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័តដោយ Local NGO (មិនរាប់បញ្ចូលប័ណ្ណដែលបានបដិសេធ)</li>\n  <li><strong>ចំនួនប័ណ្ណបានបដិសេធ</strong> — ប័ណ្ណដាក់ពិន្ទុដែលបានបដិសេធដោយ Program team</li>\n  <li><strong># កែសម្រួលសូចនាករថ្មី</strong> — indicator ប្រភេទ custom ដែលត្រូវបានកែប្រែដោយ Local NGO (ពោលគឺបានធ្វើបច្ចុប្បន្នភាពក្រោយពេលបានបង្កើតដំបូង)</li>\n</ul>\n<p><strong>តម្លៃបច្ចុប្បន្ន៖</strong> ដាក់ស្នើ 5 / អនុម័ត 3 / បដិសេធ 1 / ការកែតម្រូវ Indicator ថ្មី 0។</p>\n<p><strong>ឧទាហរណ៍៖</strong> ក្នុងចំណោមប័ណ្ណដាក់ពិន្ទុដែលបានដាក់ស្នើ 5 មាន 3 ត្រូវបានអនុម័ត និង 1 ត្រូវបានបដិសេធ ខណៈមាន 1 នៅសល់កំពុងរង់ចាំការត្រួតពិនិត្យ។ គ្មាន indicator ថ្មីណាមួយត្រូវការកែតម្រូវដោយ Local NGO ទេ។</p>\n</div>"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'data_quality_kpi_panel_description'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "data_quality_kpi_panel_description",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'data_quality_kpi_panel_description'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ការចូលមើល FAM តាមឧបករណ៍",
+          "value": "ការចូលមើល FAM តាមឧបករណ៍"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'fam_reporting_view_by_device_title'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "fam_reporting_view_by_device_title",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'fam_reporting_view_by_device_title'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "<div lang=\"km-KH\" style=\"margin-bottom: 16px;\">\n<p><strong>ការចូលមើល FAM តាមឧបករណ៍</strong></p>\n<p>ក្រាបនេះបង្ហាញពីការចូលមើល FAM ដែលបានមើលតាមឧបករណ៍ផ្សេងៗ។</p>\n</div>",
+          "value": "<div lang=\"km-KH\" style=\"margin-bottom: 16px;\">\n<p><strong>ការចូលមើល FAM តាមឧបករណ៍</strong></p>\n<p>ក្រាបនេះបង្ហាញពីការចូលមើល FAM ដែលបានមើលតាមឧបករណ៍ផ្សេងៗ។</p>\n</div>"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'fam_reporting_view_by_device_description'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "fam_reporting_view_by_device_description",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'fam_reporting_view_by_device_description'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ការចូលមើល FAM លម្អិត",
+          "value": "ការចូលមើល FAM លម្អិត"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'fam_reporting_view_by_detail_title'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "fam_reporting_view_by_detail_title",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'fam_reporting_view_by_detail_title'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "<div lang=\"km-KH\" style=\"margin-bottom: 16px;\">\n<p><strong>ការចូលមើល FAM លម្អិត</strong></p>\n<p>តារាងនេះផ្តល់បង្ហាញការចូលមើលលម្អិតនៃការចូលមើល FAM។</p>\n</div>\n</div>",
+          "value": "<div lang=\"km-KH\" style=\"margin-bottom: 16px;\">\n<p><strong>ការចូលមើល FAM លម្អិត</strong></p>\n<p>តារាងនេះផ្តល់បង្ហាញការចូលមើលលម្អិតនៃការចូលមើល FAM។</p>\n</div>\n</div>"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'fam_reporting_view_by_detail_description'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "fam_reporting_view_by_detail_description",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'fam_reporting_view_by_detail_description'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
           "text": "អប្បបរមា (ថ្ងៃ)",
           "value": "អប្បបរមា (ថ្ងៃ)"
         },
@@ -5597,7 +6053,6 @@
       },
       {
         "current": {
-          "isNone": true,
           "selected": false,
           "text": "None",
           "value": ""
@@ -6147,6 +6602,190 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ចំនួនប័ណ្ណបានដាក់ស្នើ",
+          "value": "ចំនួនប័ណ្ណបានដាក់ស្នើ"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'total_submitted_scorecard'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "total_submitted_scorecard",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'total_submitted_scorecard'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ចំនួនប័ណ្ណបានអនុម័ត",
+          "value": "ចំនួនប័ណ្ណបានអនុម័ត"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'total_approved_scorecard'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "total_approved_scorecard",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'total_approved_scorecard'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ចំនួនប័ណ្ណបានបដិសេធ",
+          "value": "ចំនួនប័ណ្ណបានបដិសេធ"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'total_rejected_scorecard'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "total_rejected_scorecard",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'total_rejected_scorecard'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "# កែសម្រួលសូចនាករថ្មី",
+          "value": "# កែសម្រួលសូចនាករថ្មី"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'total_custom_indicator_correction'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "total_custom_indicator_correction",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'total_custom_indicator_correction'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ប្រភេទឧបករណ៍",
+          "value": "ប្រភេទឧបករណ៍"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'device_type'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "device_type",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'device_type'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ប្រព័ន្ធប្រតិបត្តិការ",
+          "value": "ប្រព័ន្ធប្រតិបត្តិការ"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'os'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "os",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'os'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "Browser",
+          "value": "Browser"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'browser'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "browser",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'browser'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "ចំនួនការមើល",
+          "value": "ចំនួនការមើល"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "PCC52D03280B7034C"
+        },
+        "definition": "SELECT label\nFROM translations\nWHERE key = 'views'\n  AND locale = '$locale'",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "views",
+        "options": [],
+        "query": "SELECT label\nFROM translations\nWHERE key = 'views'\n  AND locale = '$locale'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
@@ -6184,6 +6823,6 @@
   "timezone": "browser",
   "title": "Scorecard Dashboard",
   "uid": "hqZGKcnnk",
-  "version": 39,
+  "version": 7,
   "weekStart": ""
 }
