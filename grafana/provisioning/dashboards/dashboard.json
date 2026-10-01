@@ -1150,8 +1150,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1253,8 +1252,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
-                "value": null
+                "color": "blue"
               },
               {
                 "color": "red",
@@ -1361,8 +1359,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "orange",
-                "value": null
+                "color": "orange"
               },
               {
                 "color": "red",
@@ -1469,8 +1466,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "orange",
-                "value": null
+                "color": "orange"
               },
               {
                 "color": "red",
@@ -1598,8 +1594,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1854,8 +1849,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3078,8 +3072,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3362,8 +3355,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3544,8 +3536,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3696,8 +3687,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3863,8 +3853,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4030,8 +4019,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4197,8 +4185,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4313,7 +4300,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "WITH filtered_scorecards AS (\n    SELECT s.uuid\n    FROM scorecards AS s\n    WHERE s.program_id IN (${program_id})\n      AND $__timeFilter(s.conducted_date)\n      AND s.scorecard_type IN ($scorecard_type)\n      AND s.year IN ($year)\n      AND s.facility_id IN ($facility_id)\n      AND s.province_id IN ($province_id)\n      AND s.local_ngo_id IN ($local_ngo_id)\n      AND s.deleted_at IS NULL\n      AND s.completed_at IS NOT NULL\n      AND s.rejected_at IS NULL\n      AND COALESCE(s.dataset_id::text, '') IN ($dataset_id)\n  )\n\n  SELECT\n    cate.name_${locale} AS \"$category_name\",\n    count(*) AS \"$activity_count\"\n  FROM indicator_activities ia\n  INNER JOIN filtered_scorecards sc ON ia.scorecard_uuid = sc.uuid\n  INNER JOIN indicator_activity_categories cate ON ia.indicator_activity_category_id = cate.id\n  GROUP BY cate.id, \"$category_name\"\n  ORDER BY \"$activity_count\" DESC;",
+          "rawSql": "WITH filtered_scorecards AS (\n  SELECT s.id\n  FROM scorecards AS s\n  WHERE s.program_id IN (${program_id})\n    AND $__timeFilter(s.conducted_date)\n    AND s.scorecard_type IN ($scorecard_type)\n    AND s.year IN ($year)\n    AND s.facility_id IN ($facility_id)\n    AND s.province_id IN ($province_id)\n    AND s.local_ngo_id IN ($local_ngo_id)\n    AND s.deleted_at IS NULL\n    AND s.completed_at IS NOT NULL\n    AND s.rejected_at IS NULL\n    AND COALESCE(s.dataset_id::text, '') IN ($dataset_id)\n)\n\nSELECT\n  cate.name_${locale} AS \"$category_name\",\n  count(*) AS \"$activity_count\"\nFROM indicator_activities ia\nINNER JOIN voting_indicators vi ON vi.uuid = ia.voting_indicator_uuid\nINNER JOIN filtered_scorecards sc ON vi.scorecard_uuid::int = sc.id\nINNER JOIN indicator_activity_categories cate ON ia.indicator_activity_category_id = cate.id\nGROUP BY cate.id, \"$category_name\"\nORDER BY \"$activity_count\" DESC;",
           "refId": "A",
           "select": [
             [
@@ -5802,8 +5789,8 @@
       {
         "current": {
           "selected": false,
-          "text": "<div lang=\"km-KH\">\n<p><strong>អត្រាបញ្ចប់ប័ណ្ណដាក់ពិន្ទុ (%)</strong></p>\n<p>សូចនាករនេះបង្ហាញភាគរយនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត(ទទួលយក + បដិសេធ) ធៀបនឹងប័ណ្ណដាក់ពិន្ទុដែលបានគ្រោងទុក។</p>\n<p><strong>រូបមន្ត (Formula):</strong><br>\nអត្រាបញ្ចប់ (%) = (ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត(ទទួលយក + បដិសេធ) ÷ ប័ណ្ណដាក់ពិន្ទុដែលបានគម្រោង) × 100</p>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើមានប័ណ្ណដាក់ពិន្ទុគម្រោង ៥៥ និងបានអនុម័ត ៤៥(ទទួលយក៤៤ + បដិសេធ១) នោះអត្រាបញ្ចប់គឺ៖<br>\n(៤៥ ÷ ៥៥) × 100 = 82%</p>\n</div>",
-          "value": "<div lang=\"km-KH\">\n<p><strong>អត្រាបញ្ចប់ប័ណ្ណដាក់ពិន្ទុ (%)</strong></p>\n<p>សូចនាករនេះបង្ហាញភាគរយនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត(ទទួលយក + បដិសេធ) ធៀបនឹងប័ណ្ណដាក់ពិន្ទុដែលបានគ្រោងទុក។</p>\n<p><strong>រូបមន្ត (Formula):</strong><br>\nអត្រាបញ្ចប់ (%) = (ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត(ទទួលយក + បដិសេធ) ÷ ប័ណ្ណដាក់ពិន្ទុដែលបានគម្រោង) × 100</p>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើមានប័ណ្ណដាក់ពិន្ទុគម្រោង ៥៥ និងបានអនុម័ត ៤៥(ទទួលយក៤៤ + បដិសេធ១) នោះអត្រាបញ្ចប់គឺ៖<br>\n(៤៥ ÷ ៥៥) × 100 = 82%</p>\n</div>"
+          "text": "<div lang=\"km-KH\">\n<h5>អត្រាបញ្ចប់ប័ណ្ណដាក់ពិន្ទុ (%)</h5>\n<p>សូចនាករនេះបង្ហាញភាគរយនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត(ទទួលយក + បដិសេធ) ធៀបនឹងប័ណ្ណដាក់ពិន្ទុដែលបានគ្រោងទុក។</p>\n<p><strong>រូបមន្ត (Formula):</strong><br>\nអត្រាបញ្ចប់ (%) = (ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត(ទទួលយក + បដិសេធ) ÷ ប័ណ្ណដាក់ពិន្ទុដែលបានគម្រោង) × 100</p>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើមានប័ណ្ណដាក់ពិន្ទុគម្រោង ៥៥ និងបានអនុម័ត ៤៥(ទទួលយក៤៤ + បដិសេធ១) នោះអត្រាបញ្ចប់គឺ៖<br>\n(៤៥ ÷ ៥៥) × 100 = 82%</p>\n</div>",
+          "value": "<div lang=\"km-KH\">\n<h5>អត្រាបញ្ចប់ប័ណ្ណដាក់ពិន្ទុ (%)</h5>\n<p>សូចនាករនេះបង្ហាញភាគរយនៃប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត(ទទួលយក + បដិសេធ) ធៀបនឹងប័ណ្ណដាក់ពិន្ទុដែលបានគ្រោងទុក។</p>\n<p><strong>រូបមន្ត (Formula):</strong><br>\nអត្រាបញ្ចប់ (%) = (ប័ណ្ណដាក់ពិន្ទុដែលបានអនុម័ត(ទទួលយក + បដិសេធ) ÷ ប័ណ្ណដាក់ពិន្ទុដែលបានគម្រោង) × 100</p>\n<p><strong>ឧទាហរណ៍៖</strong><br>\nប្រសិនបើមានប័ណ្ណដាក់ពិន្ទុគម្រោង ៥៥ និងបានអនុម័ត ៤៥(ទទួលយក៤៤ + បដិសេធ១) នោះអត្រាបញ្ចប់គឺ៖<br>\n(៤៥ ÷ ៥៥) × 100 = 82%</p>\n</div>"
         },
         "datasource": {
           "type": "postgres",
